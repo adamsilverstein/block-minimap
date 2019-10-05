@@ -1,0 +1,39 @@
+{
+  "name": "minimap",
+  "version": "1.0.1",
+  "description": "",
+  "main": "minimap.js",
+  "scripts": {
+    "build": "webpack --mode=production ",
+    "build:dev": "webpack --mode=development --debug --devtool cheap-source-map --output-pathinfo",
+    "watch": "webpack --watch --mode=development --debug --devtool cheap-module-eval-source-map --output-pathinfo"
+  },
+  "author": "",
+  "license": "GPL-2.0",
+  "devDependencies": {
+    "@babel/cli": "^7.5.5",
+    "@babel/core": "^7.5.5",
+    "@babel/preset-env": "^7.5.5",
+    "@babel/preset-react": "^7.0.0",
+    "babel-eslint": "^10.0.3",
+    "babel-loader": "^8.0.6",
+    "css-loader": "^3.2.0",
+    "eslint": "^6.2.2",
+    "eslint-loader": "^3.0.0",
+    "eslint-plugin-react": "^7.14.3",
+    "react": "^16.9.0",
+    "react-dom": "^16.9.0",
+    "style-loader": "^1.0.0",
+    "webpack": "^4.39.2",
+    "webpack-cli": "^3.3.7",
+    "webpackbar": "^4.0.0",
+    "@wordpress/components": "^8.3.1",
+    "@wordpress/compose": "^3.7.1",
+    "@wordpress/data": "^4.9.1",
+    "@wordpress/plugins": "^2.7.1",
+    "react-minimap": "^0.7.4"
+  },
+  "globals": {
+    "wp": "off"
+  }
+}
