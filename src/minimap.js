@@ -6,11 +6,12 @@ import './block-minimap.css';
 export default class Minimap extends Component {
 	constructor( props ) {
 		super( props );
-		console.log( 'construct' );
+
 		this.state = {
 			blocks: wp.data.select( 'core/block-editor' ).getBlocks(),
 		}
 		this.checkForUpdates = this.checkForUpdates.bind( this );
+		this.checkForUpdates = debounce( this.checkForUpdates, 250 );
 	}
 
 	componentDidMount() {
@@ -18,6 +19,7 @@ export default class Minimap extends Component {
 	}
 
 	componentWillUnmount() {
+		this.unsubscribe();
 	}
 
 	checkForUpdates() {
@@ -32,7 +34,7 @@ export default class Minimap extends Component {
 	render() {
 		const { blocks } = this.state;
 		const title  = wp.data.select( 'core/editor' ).getEditedPostAttribute( 'title' );
-		console.log( 'render', blocks);
+
 		return (
 			<div
 				id="minimap-container"
@@ -81,9 +83,6 @@ export default class Minimap extends Component {
 										);
 										break;
 
-
-
-
 								case 'core/paragraph':
 									return (
 										<div
@@ -94,6 +93,7 @@ export default class Minimap extends Component {
 										/>
 									);
 									break;
+
 								case 'core/heading':
 										const CustomTag = `h${ block.attributes.level }`;
 
@@ -117,7 +117,6 @@ export default class Minimap extends Component {
 										/>
 									);
 							}
-							console.log( block );
 						} )
 				}
 			</div>
