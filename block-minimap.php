@@ -20,8 +20,7 @@ namespace BlockMinimap;
   * Enqueue the admin JavaScript assets.
   */
 function gcm_block_enqueue_scripts() {
-	//wp_enqueue_script( 'lodash' );
-//	wp_add_inline_script( 'lodash', 'window.lodash = _.noConflict();', 'after' );
+
 	wp_enqueue_script(
 		'minimap',
 		plugin_dir_url( __FILE__ ) . 'dist/minimap.js',

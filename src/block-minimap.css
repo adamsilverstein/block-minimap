@@ -1,1 +1,20 @@
+.minimap-block {
+	background-color: #fefefe;
+	width: 240px;
+	min-height: 10px;
+	margin-bottom:10px;
+	font-size: .7em;
+	line-height: 1;
+	padding: 2px;
+	list-style-type: disc;
+}
 
+.minimap-block.title {
+	font-size: 1.2em;
+	line-height: 1.2;
+}
+
+.minimap-block.core-list ul {
+	padding-left: 10px;
+	list-style: disc;
+}
