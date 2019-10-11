@@ -1,12 +1,12 @@
 # Block Minimap
 
-> A Block minimap for the WordPress block editor (Gutenberg).
+> A minimap for the WordPress block editor (Gutenberg).
 
 [![Support Level](https://img.shields.io/badge/support-active-green.svg)](#support-level) [![Release Version](https://img.shields.io/github/release/adamsilverstein/minimap.svg)](https://github.com/adamsilverstein/minimap/releases/latest) ![WordPress tested up to version](https://img.shields.io/badge/WordPress-v5.2%20tested-success.svg) [![MIT License](https://img.shields.io/github/license/adamsilverstein/minimap.svg)](https://github.com/adamsilverstein/minimap/blob/develop/LICENSE.md)
 
-## Overview
+## Screenshot
 
-
+![Image](https://cl.ly/5dd7d76915ba/Add_New_Post_9_Develop_WordPress__WordPress_2019-10-10_23-45-34.jpg)
 
 ## Requirements
 
