@@ -1,102 +1,66 @@
-/**
- * WordPress dependencies
- */
-import { IconButton, Panel, PinnedPlugins, Sidebar, SidebarHeader } from '@wordpress/components';
-import { withDispatch, withSelect } from '@wordpress/data';
-import { __ } from '@wordpress/i18n';
-import { withPluginContext } from '@wordpress/plugins';
-import { compose } from '@wordpress/compose';
+import minimap from 'dom-minimap';
 
+const { __ } = wp.i18n;
+const { Fragment, Component } = wp.element;
+const { registerPlugin } = wp.plugins;
+const { PluginSidebar, PluginSidebarMoreMenuItem } = wp.editPost;
+const { PanelBody, PanelRow } = wp.components;
 
-function PluginSidebar( props ) {
-	const {
-		children,
-		className,
-		icon,
-		isActive,
-		isPinnable = true,
-		isPinned,
-		sidebarName,
-		title,
-		togglePin,
-		toggleSidebar,
-	} = props;
+class Minimap extends Component {
+
+  componentDidMount() {
+	  const doc = document.getElementById( 'wpwrap' );
+	const map = minimap({ content: 'wpwrap' });
+
+    // mount the element when the ract dom has rendered
+    document.getElementById('minimap-container').appendChild(map());
+  }
+
+  componentWillUnmount() {
+    // clean up work here.
+  }
+
+  shouldComponentUpdate() {
+    // update your internal component state on every run
+    map();
+    // the react component will not rerender
+    return false
+  }
+
+  render() {
+	  console.log( 'render' );
+    return React.createElement('div', { id: 'minimap-container', style: {height: '100%'}})
+  }
+};
+
+const BlockMinimapSidebar = ( p ) => {
 
 	return (
-		<>
-			{ isPinnable && (
-				<PinnedPlugins>
-					{ isPinned && <IconButton
-						icon={ icon }
-						label={ title }
-						onClick={ toggleSidebar }
-						isToggled={ isActive }
-						aria-expanded={ isActive }
-					/> }
-				</PinnedPlugins>
-			) }
-			<Sidebar
-				name={ sidebarName }
-				label={ __( 'Editor plugins' ) }
+		<Fragment>
+			<PluginSidebarMoreMenuItem
+				target="block-minimap"
+				onClick={ ( e ) => {
+					console.log( e );
+				} }
 			>
-				<SidebarHeader
-					closeLabel={ __( 'Close plugin' ) }
-				>
-					<strong>{ title }</strong>
-					{ isPinnable && (
-						<IconButton
-							icon={ isPinned ? 'star-filled' : 'star-empty' }
-							label={ isPinned ? __( 'Unpin from toolbar' ) : __( 'Pin to toolbar' ) }
-							onClick={ togglePin }
-							isToggled={ isPinned }
-							aria-expanded={ isPinned }
-						/>
-					) }
-				</SidebarHeader>
-				<Panel className={ className }>
-					{ children }
-				</Panel>
-			</Sidebar>
-		</>
+				{__("Block Minimap", "block-minimap")}
+			</PluginSidebarMoreMenuItem>
+			<PluginSidebar
+				name="block-minimap"
+				title={__("Block Minimap", "block-minimap")}
+			>
+			<PanelBody>
+				<PanelRow>
+					<Minimap />
+				</PanelRow>
+			</PanelBody>
+			</PluginSidebar>
+		</Fragment>
 	);
-}
+};
 
-export default compose(
-	withPluginContext( ( context, ownProps ) => {
-		return {
-			icon: ownProps.icon || context.icon,
-			sidebarName: `${ context.name }/${ ownProps.name }`,
-		};
-	} ),
-	withSelect( ( select, { sidebarName } ) => {
-		const {
-			getActiveGeneralSidebarName,
-			isPluginItemPinned,
-		} = select( 'core/edit-post' );
+registerPlugin( "block-minimap", {
+  icon: "schedule",
+  render: BlockMinimapSidebar
+});
 
-		return {
-			isActive: getActiveGeneralSidebarName() === sidebarName,
-			isPinned: isPluginItemPinned( sidebarName ),
-		};
-	} ),
-	withDispatch( ( dispatch, { isActive, sidebarName } ) => {
-		const {
-			closeGeneralSidebar,
-			openGeneralSidebar,
-			togglePinnedPluginItem,
-		} = dispatch( 'core/edit-post' );
-
-		return {
-			togglePin() {
-				togglePinnedPluginItem( sidebarName );
-			},
-			toggleSidebar() {
-				if ( isActive ) {
-					closeGeneralSidebar();
-				} else {
-					openGeneralSidebar( sidebarName );
-				}
-			},
-		};
-	} ),
-)( PluginSidebar );

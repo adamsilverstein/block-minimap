@@ -18,9 +18,8 @@ module.exports = [
 						{
 							loader: 'babel-loader',
 							query: {
-								presets: [ [ '@babel/env', {
-									'useBuiltIns': 'entry',
-								} ], '@babel/preset-react' ],
+								plugins: [ 'lodash' ],
+								presets: [ '@babel/env', '@babel/preset-react' ],
 							}
 						}
 					]

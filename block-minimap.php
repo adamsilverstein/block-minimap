@@ -1,15 +1,15 @@
 <?php
 /**
  * Plugin Name:       Block Minimap
- * Plugin URI:        https://github.com/10up/minimap
+ * Plugin URI:        https://github.com/adamsilverstein/minimap
  * Description:       A Block minimap for the WordPress block editor (Gutenberg).
- * Version:           1.0.1
- * Requires at least: 5.2
+ * Version:           1.0.0
+ * Requires at least: 5.0
  * Requires PHP:      5.6
- * Author:            10up
- * Author URI:        https://10up.com
- * License:           MIT
- * License URI:       https://www.gnu.org/licenses/mit.html
+ * Author:            adamsilverstein
+ * Author URI:        https://earthbound.com
+ * License:           GPLv2 or later
+ * License URI:       https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  * Text Domain:       minimap
  *
  * @package minimap
@@ -20,11 +20,12 @@ namespace BlockMinimap;
   * Enqueue the admin JavaScript assets.
   */
 function gcm_block_enqueue_scripts() {
-
+	//wp_enqueue_script( 'lodash' );
+//	wp_add_inline_script( 'lodash', 'window.lodash = _.noConflict();', 'after' );
 	wp_enqueue_script(
 		'minimap',
 		plugin_dir_url( __FILE__ ) . 'dist/minimap.js',
-		array( 'wp-blocks', 'wp-i18n', 'wp-editor' ),
+		array(  ),
 		'',
 		true
 	);

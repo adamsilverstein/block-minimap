@@ -10,17 +10,15 @@ Contributing isn't just writing code - it's anything that improves the project. 
 
 ### Reporting bugs
 
-If you're running into an issue with the plugin, please take a look through [existing issues](https://github.com/10up/minimap/issues) and [open a new one](https://github.com/10up/minimap/issues/new) if needed. If you're able, include steps to reproduce, environment information, and screenshots/screencasts as relevant.
+If you're running into an issue with the plugin, please take a look through [existing issues](https://github.com/adamsilverstein/minimap/issues) and [open a new one](https://github.com/adamsilverstein/minimap/issues/new) if needed. If you're able, include steps to reproduce, environment information, and screenshots/screencasts as relevant.
 
 ### Suggesting enhancements
 
-New features and enhancements are also managed via [issues](https://github.com/10up/minimap/issues).
+New features and enhancements are also managed via [issues](https://github.com/adamsilverstein/minimap/issues).
 
 ### Pull requests
 
 Pull requests represent a proposed solution to a specified problem. They should always reference an issue that describes the problem and contains discussion about the problem itself. Discussion on pull requests should be limited to the pull request itself, i.e. code review.
-
-For more on how 10up writes and manages code, check out our [10up Engineering Best Practices](https://10up.github.io/Engineering-Best-Practices/).
 
 ## Workflow
 
@@ -34,7 +32,7 @@ The `develop` branch is the development branch which means it contains the next 
 4. Check to be sure any new files/paths that are unnecessary in the production version are included in `.distignore`.
 5. Merge: Make a non-fast-forward merge from your release branch to `develop` (or merge the pull request), then do the same for `develop` into `master`. `master` contains the stable development version.
 6. Push: Push your master branch to GitHub, e.g. `git push origin master`.
-7. Git tag: Create a [new release](https://github.com/10up/minimap/releases/new) as `X.Y.Z` on the `master` branch in GitHub.
-8. Deploy to WordPress.org: Head to the [Actions](https://github.com/10up/minimap/actions) tab in the repo and wait for the Deploy to WordPress.org workflow to finish if it hasn't already. If it doesn't succeed, figure out why and head back to delete the tag and try again.
-9. Edit the [X.Y.Z milestone](https://github.com/10up/minimap/milestone/#) with release date (in the `Due date (optional)` field) and link to GitHub release (in the `Description` field), then close the `X.Y.Z` milestone.
+7. Git tag: Create a [new release](https://github.com/adamsilverstein/minimap/releases/new) as `X.Y.Z` on the `master` branch in GitHub.
+8. Deploy to WordPress.org: Head to the [Actions](https://github.com/adamsilverstein/minimap/actions) tab in the repo and wait for the Deploy to WordPress.org workflow to finish if it hasn't already. If it doesn't succeed, figure out why and head back to delete the tag and try again.
+9. Edit the [X.Y.Z milestone](https://github.com/adamsilverstein/minimap/milestone/#) with release date (in the `Due date (optional)` field) and link to GitHub release (in the `Description` field), then close the `X.Y.Z` milestone.
 10. If any open issues or PRs which were milestoned for `X.Y.Z` do not make it into the release, update their milestone to `X.Y.Z+1` or `Future Release`.
