@@ -30,7 +30,3 @@ A complete listing of all notable changes to Block Minimap are documented in [CH
 ## Contributing
 
 Please read [CODE_OF_CONDUCT.md](https://github.com/adamsilverstein/minimap/blob/develop/CODE_OF_CONDUCT.md) for details on our code of conduct, [CONTRIBUTING.md](https://github.com/adamsilverstein/minimap/blob/develop/CONTRIBUTING.md) for details on the process for submitting pull requests to us, and [CREDITS.md](https://github.com/adamsilverstein/minimap/blob/develop/CREDITS.md) for a listing of maintainers of, contributors to, and libraries used by Block Minimap.
-
-## Like what you see?
-
-<a href="http://adamsilverstein.com/contact/"><img src="https://adamsilversteindotcom-wpengine.s3.amazonaws.com/uploads/2016/10/adamsilverstein-Github-Banner.png" width="850" alt="Work with us at adamsilverstein"></a>
