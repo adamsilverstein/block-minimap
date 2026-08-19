@@ -3,7 +3,7 @@
  * Plugin Name:       Block Minimap
  * Plugin URI:        https://github.com/adamsilverstein/minimap
  * Description:       A Block minimap for the WordPress block editor (Gutenberg).
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 5.0
  * Requires PHP:      5.6
  * Author:            adamsilverstein

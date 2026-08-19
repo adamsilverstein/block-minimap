@@ -2,9 +2,9 @@
 Contributors:  adamsilverstein
 Tags: Minimap, mini-map, Gutenberg, Block, block editor
 Requires at least: 5.0
-Tested up to: 5.3
+Tested up to: 7.1
 Requires PHP: 5.6
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPL-2.0
 License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ Development takes place in the [GitHub repository](https://github.com/adamsilver
 3. Use Block Minimap!
 
 == Changelog ==
+
+= 1.0.1 =
+* Confirm compatibility with WordPress 7.1.
 
 = 1.0.0 =
 Added
