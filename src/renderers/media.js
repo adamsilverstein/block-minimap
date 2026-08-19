@@ -2,6 +2,7 @@
  * Internal dependencies
  */
 import { blockClasses, blockTitle } from './utils';
+import { renderInner } from './containers';
 
 /**
  * A labeled placeholder for media without a URL.
@@ -29,24 +30,51 @@ export const mediaPlaceholder = ( block, label, aspectClass ) => (
 );
 
 /**
- * Renders a cover block as its background image, or a placeholder without one.
+ * Renders a cover block as its background image with any inner blocks below,
+ * or a placeholder when it has neither.
  *
  * @param {Object} block A `core/cover` block.
- * @return {WPElement} The thumbnail or placeholder.
+ * @param {Object} ctx   Renderer context.
+ * @return {WPElement} The thumbnail, a placeholder, or both media and children.
  */
-export const renderCover = ( block ) => {
+export const renderCover = ( block, ctx ) => {
 	const { url } = block.attributes;
+	const hasChildren = ( block.innerBlocks || [] ).length > 0;
 
-	if ( ! url ) {
+	if ( ! url && ! hasChildren ) {
 		return mediaPlaceholder( block, blockTitle( block ), 'aspect-wide' );
 	}
 
+	if ( ! hasChildren ) {
+		return (
+			<img
+				className={ blockClasses( block, 'minimap-media' ) }
+				src={ url }
+				alt={ blockTitle( block ) }
+			/>
+		);
+	}
+
 	return (
-		<img
-			className={ blockClasses( block, 'minimap-media' ) }
-			src={ url }
-			alt={ blockTitle( block ) }
-		/>
+		<div className={ blockClasses( block, 'minimap-cover' ) }>
+			{ url && (
+				/*
+				 * The image repeats the block class so a cover reads the
+				 * same way whether or not it has children yet.
+				 */
+				<img
+					className={ `minimap-media minimap-cover__media ${ block.name.replace(
+						/\//g,
+						'-'
+					) }` }
+					src={ url }
+					alt={ blockTitle( block ) }
+				/>
+			) }
+			<div className="minimap-cover__inner">
+				{ renderInner( block, ctx ) }
+			</div>
+		</div>
 	);
 };
 

@@ -86,6 +86,40 @@
 	overflow: hidden;
 }
 
+/* Containers mirror the document tree; the border makes nesting legible. */
+.minimap-container {
+	padding: 2px 0 0 6px;
+	border-left: 2px solid #e0e0e0;
+}
+
+.minimap-container .minimap-block,
+.minimap-columns .minimap-block,
+.minimap-cover__inner .minimap-block {
+	width: auto;
+	margin-bottom: 4px;
+}
+
+/* Columns lay out side by side; the horizontal split is the point. */
+.minimap-columns {
+	display: flex;
+	gap: 4px;
+}
+
+.minimap-columns > .minimap-block {
+	flex: 1;
+	min-width: 0;
+}
+
+/* Stands in for anything nested past the depth cap. */
+.minimap-truncated {
+	color: #757575;
+	font-style: italic;
+}
+
+.minimap-cover__media {
+	margin-bottom: 2px;
+}
+
 /* Media thumbnails keep their shape at sidebar scale. */
 img.minimap-media {
 	display: block;

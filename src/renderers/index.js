@@ -2,6 +2,7 @@
  * Internal dependencies
  */
 import { renderChip, renderMissing, renderRaw } from './generic';
+import { renderColumns, renderContainer } from './containers';
 import { renderHeading, renderList, renderText } from './text';
 import { renderCover, renderImage } from './media';
 import { renderSeparator } from './chrome';
@@ -14,6 +15,7 @@ const { getBlockType } = wp.blocks;
  * here rather than editing a growing conditional.
  */
 const registry = {
+	'core/columns': renderColumns,
 	'core/cover': renderCover,
 	'core/freeform': renderRaw( 'content' ),
 	'core/heading': renderHeading,
@@ -37,11 +39,12 @@ const categoryDefaults = {
 /**
  * Picks the renderer for a block.
  *
- * Resolution order: an exact registry match, then the block's category
- * default, then the generic icon-and-title chip. The chip is the load
- * bearing arm: it needs nothing but `getBlockType()` metadata, so blocks
- * nobody wrote a renderer for — third party ones included — still show
- * their own icon and name.
+ * Resolution order: an exact registry match, then the container family for
+ * anything holding `innerBlocks`, then the block's category default, then
+ * the generic icon-and-title chip. The chip is the load bearing arm: it
+ * needs nothing but `getBlockType()` metadata, so blocks nobody wrote a
+ * renderer for — third party ones included — still show their own icon and
+ * name.
  *
  * @param {Object} block Block to render.
  * @return {Function} A renderer taking ( block, context ).
@@ -49,6 +52,10 @@ const categoryDefaults = {
 export function resolveRenderer( block ) {
 	if ( registry[ block.name ] ) {
 		return registry[ block.name ];
+	}
+
+	if ( block.innerBlocks && block.innerBlocks.length ) {
+		return renderContainer;
 	}
 
 	const blockType = getBlockType( block.name );
