@@ -49,6 +49,36 @@ test.describe( 'Media rendering', () => {
 		);
 	} );
 
+	test( 'renders a gallery saved before the inner block format', async ( {
+		page,
+		editor,
+	} ) => {
+		/*
+		 * WordPress 5.9 moved gallery images into inner core/image blocks.
+		 * A gallery saved before that keeps them in the images attribute and
+		 * has no inner blocks at all, and it is still a full gallery.
+		 */
+		await editor.insertBlock( {
+			name: 'core/gallery',
+			attributes: {
+				images: [
+					{ url: TEST_IMAGE_URL, alt: 'One' },
+					{ url: TEST_IMAGE_URL, alt: 'Two' },
+				],
+			},
+		} );
+
+		await openMinimap( page );
+
+		const thumbs = getMinimap( page ).locator( '.core-gallery img' );
+		await expect( thumbs ).toHaveCount( 2 );
+		await expect( thumbs.nth( 0 ) ).toHaveAttribute(
+			'src',
+			TEST_IMAGE_URL
+		);
+		await expect( thumbs.nth( 0 ) ).toHaveAttribute( 'alt', 'One' );
+	} );
+
 	test( 'labels an empty gallery instead of rendering broken images', async ( {
 		page,
 		editor,

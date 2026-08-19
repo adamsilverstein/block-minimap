@@ -108,13 +108,36 @@ export const renderImage = ( block ) => {
 /**
  * Renders a gallery as a row of its images' thumbnails.
  *
+ * WordPress 5.9 moved gallery images into inner `core/image` blocks. A
+ * gallery saved before that keeps them in the `images` attribute and has no
+ * inner blocks at all, so read those as the fallback rather than drawing a
+ * fully populated gallery as an empty placeholder.
+ *
  * @param {Object} block A `core/gallery` block.
  * @return {WPElement} The thumbnails or a placeholder without any URLs.
  */
 export const renderGallery = ( block ) => {
-	const images = ( block.innerBlocks || [] ).filter(
-		( image ) => image.attributes && image.attributes.url
+	const inner = map(
+		( block.innerBlocks || [] ).filter(
+			( image ) => image.attributes && image.attributes.url
+		),
+		( image ) => ( {
+			key: image.clientId,
+			url: image.attributes.url,
+			alt: image.attributes.alt || blockTitle( image ),
+		} )
 	);
+	const legacy = map(
+		( block.attributes.images || [] ).filter(
+			( image ) => image && image.url
+		),
+		( image, index ) => ( {
+			key: image.id || index,
+			url: image.url,
+			alt: image.alt || blockTitle( block ),
+		} )
+	);
+	const images = inner.length ? inner : legacy;
 
 	if ( ! images.length ) {
 		return mediaPlaceholder( block, blockTitle( block ), 'aspect-wide' );
@@ -124,10 +147,10 @@ export const renderGallery = ( block ) => {
 		<div className={ blockClasses( block, 'minimap-gallery' ) }>
 			{ map( images, ( image ) => (
 				<img
-					key={ image.clientId }
+					key={ image.key }
 					className="minimap-media minimap-gallery__thumb"
-					src={ image.attributes.url }
-					alt={ image.attributes.alt || blockTitle( image ) }
+					src={ image.url }
+					alt={ image.alt }
 				/>
 			) ) }
 		</div>
