@@ -12,9 +12,6 @@ const BlockMinimapSidebar = ( p ) => {
 		<Fragment>
 			<PluginSidebarMoreMenuItem
 				target="block-minimap"
-				onClick={ ( e ) => {
-					console.log( e );
-				} }
 			>
 				{__("Block Minimap", "block-minimap")}
 			</PluginSidebarMoreMenuItem>
