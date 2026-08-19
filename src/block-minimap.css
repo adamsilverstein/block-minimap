@@ -193,7 +193,7 @@ img.minimap-media {
 	gap: 2px;
 }
 
-.minimap-gallery__thumb {
+img.minimap-media.minimap-gallery__thumb {
 	max-height: 28px;
 }
 
