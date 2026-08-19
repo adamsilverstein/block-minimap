@@ -3,6 +3,60 @@ const { subscribe } = wp.data;
 const { debounce, map } = lodash;
 import './block-minimap.css';
 
+/*
+ * Rich text attributes arrive as RichTextData objects rather than strings, and
+ * dangerouslySetInnerHTML needs a string.
+ */
+const toHtml = ( value ) => ( value ? String( value ) : '' );
+
+/**
+ * Renders a list block as a list.
+ *
+ * WordPress 6.1 moved list items out of the block's `values` attribute and into
+ * inner `core/list-item` blocks, so read those first and keep `values` as a
+ * fallback for content saved before the change. A list item can itself hold a
+ * nested list, hence the recursion.
+ *
+ * @param {Object} block A `core/list` block.
+ * @param {?number} key  React key, when rendered as one of several siblings.
+ * @return {WPElement} The rendered list.
+ */
+const renderList = ( block, key ) => {
+	const ListTag = block.attributes.ordered ? 'ol' : 'ul';
+	const items = block.innerBlocks || [];
+
+	if ( ! items.length ) {
+		return (
+			<ListTag
+				key={ key }
+				dangerouslySetInnerHTML={ {
+					__html: toHtml( block.attributes.values ),
+				} }
+			/>
+		);
+	}
+
+	return (
+		<ListTag key={ key }>
+			{ map( items, ( item, i ) => (
+				<li key={ i }>
+					<span
+						dangerouslySetInnerHTML={ {
+							__html: toHtml( item.attributes.content ),
+						} }
+					/>
+					{ map(
+						( item.innerBlocks || [] ).filter(
+							( inner ) => inner.name === 'core/list'
+						),
+						( nested, n ) => renderList( nested, n )
+					) }
+				</li>
+			) ) }
+		</ListTag>
+	);
+};
+
 export default class Minimap extends Component {
 	constructor( props ) {
 		super( props );
@@ -74,11 +128,7 @@ export default class Minimap extends Component {
 												key={ i }
 												className={ `minimap-block ${ block.name.replace( '/', '-' ) }` }
 											>
-												<ul
-													dangerouslySetInnerHTML={ {
-														__html: block.attributes.values
-													} }
-												/>
+												{ renderList( block ) }
 											</div>
 										);
 										break;

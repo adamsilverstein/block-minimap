@@ -1,0 +1,57 @@
+name: End-to-end tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright
+    runs-on: ubuntu-latest
+    # Guards against `playwright install` hanging on the runner, which
+    # otherwise burns minutes until the six hour default.
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the editor bundle
+        # dist is committed, so build from src here and let the tests run
+        # against what the current source produces rather than a stale bundle.
+        run: npm run build
+
+      - name: Install Playwright's browser
+        # Without --with-deps, which shells out to apt-get and has been seen to
+        # block on the package lock. ubuntu-latest already carries what Chromium
+        # needs.
+        run: npx playwright install chromium
+
+      - name: Start WordPress
+        run: npm run env:start
+
+      - name: Run the end-to-end tests
+        run: npm run test:e2e
+
+      - name: Upload failure artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: artifacts
+          retention-days: 7

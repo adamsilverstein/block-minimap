@@ -2,6 +2,16 @@
 /.git
 /.github
 /node_modules
+/tests
+/src
+/artifacts
+/playwright-report
+/test-results
 
 .distignore
 .gitignore
+.wp-env.json
+playwright.config.js
+webpack.config.js
+package.json
+package-lock.json

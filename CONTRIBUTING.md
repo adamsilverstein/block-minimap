@@ -20,6 +20,28 @@ New features and enhancements are also managed via [issues](https://github.com/a
 
 Pull requests represent a proposed solution to a specified problem. They should always reference an issue that describes the problem and contains discussion about the problem itself. Discussion on pull requests should be limited to the pull request itself, i.e. code review.
 
+## Running the tests
+
+The minimap is covered by end-to-end tests that drive a real block editor, so
+they need a WordPress to run against. [`wp-env`](https://www.npmjs.com/package/@wordpress/env)
+supplies one and needs Docker running.
+
+```sh
+npm install
+npx playwright install chromium
+npm run env:start
+npm run test:e2e
+```
+
+`npm run test:e2e:headed` watches it happen in a browser, `npm run test:e2e:ui`
+opens Playwright's runner, and `npm run env:clean` throws the WordPress install
+away when it gets into a bad state.
+
+The tests read `dist/minimap.js`, the same bundle that ships, so run
+`npm run build` after changing anything under `src/`. CI does this for you.
+
+Traces, screenshots and video from a failing run land in `artifacts/`.
+
 ## Workflow
 
 The `develop` branch is the development branch which means it contains the next version to be released. `stable` contains the current latest release and `master` contains the corresponding stable development version. Always work on the `develop` branch and open up PRs against `develop`.

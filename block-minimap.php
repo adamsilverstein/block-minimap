@@ -24,7 +24,7 @@ function gcm_block_enqueue_scripts() {
 	wp_enqueue_script(
 		'minimap',
 		plugin_dir_url( __FILE__ ) . 'dist/minimap.js',
-		array( 'lodash', 'wp-components', 'wp-data', 'wp-edit-post', 'wp-element', 'wp-i18n', 'wp-plugins' ),
+		array( 'lodash', 'wp-components', 'wp-data', 'wp-edit-post', 'wp-editor', 'wp-element', 'wp-i18n', 'wp-plugins' ),
 		'1.0.1',
 		true
 	);
