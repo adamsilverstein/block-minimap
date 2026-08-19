@@ -1,7 +1,19 @@
-# Directories
+# Dependencies
+/node_modules
+
+# Test output
+/artifacts
+/playwright-report
+/test-results
+
+# Local environment overrides
+/.wp-env.override.json
+
+# Export rules (see .gitattributes)
 /.wordpress-org export-ignore
 /.github export-ignore
-
-# Files
 /.gitattributes export-ignore
 /.gitignore export-ignore
+
+# Build artifacts from build:dev
+/dist/*.map
