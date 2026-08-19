@@ -3,7 +3,7 @@
  * Plugin Name:       Block Minimap
  * Plugin URI:        https://github.com/adamsilverstein/minimap
  * Description:       A Block minimap for the WordPress block editor (Gutenberg).
- * Version:           1.0.1
+ * Version:           1.1.0
  * Requires at least: 5.0
  * Requires PHP:      5.6
  * Author:            adamsilverstein
@@ -16,6 +16,27 @@
  */
 namespace BlockMinimap;
 
+/**
+ * The plugin's version, read from its own header.
+ *
+ * The version is the editor bundle's cache key, so it has to be the version
+ * that shipped the bundle. Reading the header rather than repeating it keeps
+ * a release from bumping one and not the other, which would leave browsers
+ * on the previous bundle.
+ *
+ * @return string Plugin version.
+ */
+function get_version() {
+	static $version = null;
+
+	if ( null === $version ) {
+		$data    = get_file_data( __FILE__, array( 'Version' => 'Version' ) );
+		$version = $data['Version'];
+	}
+
+	return $version;
+}
+
  /**
   * Enqueue the admin JavaScript assets.
   */
@@ -25,7 +46,7 @@ function gcm_block_enqueue_scripts() {
 		'minimap',
 		plugin_dir_url( __FILE__ ) . 'dist/minimap.js',
 		array( 'lodash', 'wp-block-editor', 'wp-blocks', 'wp-components', 'wp-data', 'wp-edit-post', 'wp-editor', 'wp-element', 'wp-i18n', 'wp-plugins' ),
-		'1.0.1',
+		get_version(),
 		true
 	);
 
