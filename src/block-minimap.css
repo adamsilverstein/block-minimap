@@ -2,7 +2,7 @@
 	background-color: #fefefe;
 	width: 240px;
 	min-height: 10px;
-	margin-bottom:10px;
+	margin-bottom: 10px;
 	font-size: .7em;
 	line-height: 1;
 	padding: 2px;
@@ -17,4 +17,103 @@
 .minimap-block.core-list ul {
 	padding-left: 10px;
 	list-style: disc;
+}
+
+/* Text bands clamp so a long paragraph reads as a band, not a wall. */
+.minimap-text {
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	line-height: 1.2;
+}
+
+/* Tier 1 fallback: the block's icon and title in a band. */
+.minimap-chip {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	background-color: #f6f7f7;
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	color: #1e1e1e;
+}
+
+.minimap-chip .block-editor-block-icon {
+	width: 14px;
+	height: 14px;
+	min-width: 14px;
+}
+
+.minimap-chip .block-editor-block-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+.minimap-chip__label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Chip height approximates how much room the category tends to occupy. */
+.minimap-chip.category-media,
+.minimap-chip.category-embed {
+	min-height: 36px;
+}
+
+.minimap-chip.category-design,
+.minimap-chip.category-theme {
+	min-height: 24px;
+}
+
+/* An unresolved block is something the author wants to notice. */
+.minimap-chip.minimap-missing {
+	background-color: #fcf0f1;
+	border: 1px dashed #cc1818;
+	color: #cc1818;
+}
+
+/* Raw markup blocks show their escaped source as tiny code. */
+.minimap-raw pre {
+	margin: 0;
+	font-size: .9em;
+	white-space: pre-wrap;
+	word-break: break-word;
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+/* Media thumbnails keep their shape at sidebar scale. */
+img.minimap-media {
+	display: block;
+	width: auto;
+	max-width: 100%;
+	max-height: 64px;
+}
+
+.minimap-media-placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: #f0f0f1;
+	border: 1px dashed #ccc;
+	color: #757575;
+	text-align: center;
+}
+
+.minimap-media-placeholder.aspect-wide {
+	width: 120px;
+	aspect-ratio: 16 / 9;
+}
+
+.minimap-media-placeholder.aspect-square {
+	width: 48px;
+	aspect-ratio: 1;
+}
+
+.minimap-media-placeholder.aspect-band {
+	min-height: 24px;
 }

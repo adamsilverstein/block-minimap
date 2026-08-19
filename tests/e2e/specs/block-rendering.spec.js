@@ -65,9 +65,37 @@ test.describe( 'Block rendering', () => {
 
 		await openMinimap( page );
 
-		await expect(
-			getMinimap( page ).locator( 'img.core-image' )
-		).toHaveAttribute( 'src', TEST_IMAGE_URL );
+		const image = getMinimap( page ).locator( 'img.core-image' );
+		await expect( image ).toHaveAttribute( 'src', TEST_IMAGE_URL );
+		await expect( image ).toHaveAttribute( 'alt', 'A logo' );
+	} );
+
+	test( 'labels an image with no URL instead of rendering a broken img', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( { name: 'core/image' } );
+
+		await openMinimap( page );
+
+		await expect( getMinimap( page ).locator( '.core-image' ) ).toHaveText(
+			'Image'
+		);
+		await expect( getMinimap( page ).locator( 'img' ) ).toHaveCount( 0 );
+	} );
+
+	test( 'labels a cover with no URL instead of rendering a broken img', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( { name: 'core/cover' } );
+
+		await openMinimap( page );
+
+		await expect( getMinimap( page ).locator( '.core-cover' ) ).toHaveText(
+			'Cover'
+		);
+		await expect( getMinimap( page ).locator( 'img' ) ).toHaveCount( 0 );
 	} );
 
 	test( 'renders a cover block as an image with the block URL', async ( {
@@ -173,7 +201,7 @@ test.describe( 'Block rendering', () => {
 		).toHaveText( 'Child' );
 	} );
 
-	test( 'falls back to an empty placeholder for unsupported blocks', async ( {
+	test( 'renders code content rather than an empty box', async ( {
 		page,
 		editor,
 	} ) => {
@@ -184,9 +212,9 @@ test.describe( 'Block rendering', () => {
 
 		await openMinimap( page );
 
-		const placeholder = getMinimap( page ).locator( '.core-code' );
-		await expect( placeholder ).toHaveCount( 1 );
-		await expect( placeholder ).toBeEmpty();
+		await expect( getMinimap( page ).locator( '.core-code' ) ).toHaveText(
+			'const answer = 42;'
+		);
 	} );
 
 	test( 'keeps minimap entries in the same order as the editor', async ( {
