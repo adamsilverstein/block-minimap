@@ -145,6 +145,32 @@ test.describe( 'Media rendering', () => {
 		expect( content.x ).toBeGreaterThan( media.x );
 	} );
 
+	test( 'labels media & text with no URL instead of rendering a broken img', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( {
+			name: 'core/media-text',
+			innerBlocks: [
+				{
+					name: 'core/paragraph',
+					attributes: { content: 'Text without media' },
+				},
+			],
+		} );
+
+		await openMinimap( page );
+
+		const entry = getMinimap( page ).locator( '.core-media-text' );
+		await expect( entry.locator( 'img' ) ).toHaveCount( 0 );
+		await expect(
+			entry.locator( '.minimap-media-placeholder' )
+		).toBeVisible();
+		await expect( entry.locator( '.core-paragraph' ) ).toHaveText(
+			'Text without media'
+		);
+	} );
+
 	test( 'renders a cover with children as media above its content', async ( {
 		page,
 		editor,

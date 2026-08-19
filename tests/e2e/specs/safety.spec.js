@@ -87,4 +87,49 @@ test.describe( 'Raw markup safety', () => {
 		await expect( entry ).toContainText( '<em>' );
 		await expect( entry.locator( 'em' ) ).toHaveCount( 0 );
 	} );
+
+	test( 'shows a classic block as escaped source', async ( {
+		page,
+		editor,
+	} ) => {
+		const sentinel = '/freeform-sentinel-should-never-load.png';
+		const sentinelRequests = [];
+		page.on( 'request', ( request ) => {
+			if (
+				request.url().includes( sentinel ) &&
+				request.frame() === page.mainFrame()
+			) {
+				sentinelRequests.push( request.url() );
+			}
+		} );
+
+		await editor.insertBlock( {
+			name: 'core/freeform',
+			attributes: {
+				content: `<script>window.__minimapFreeformExecuted = true;</script><img src="${ sentinel }" onerror="window.__minimapFreeformOnError = true;">`,
+			},
+		} );
+
+		await openMinimap( page );
+
+		// The source reads as text, script tag included.
+		const entry = getMinimap( page ).locator( '.core-freeform' );
+		await expect( entry ).toContainText( '<script>' );
+		await expect( entry ).toContainText( 'onerror' );
+
+		// Nothing was parsed into a live element.
+		await expect( entry.locator( 'img' ) ).toHaveCount( 0 );
+		await expect( entry.locator( 'script' ) ).toHaveCount( 0 );
+
+		// Nothing executed and nothing was requested from the top frame.
+		await expect
+			.poll( () =>
+				page.evaluate( () => ( {
+					executed: window.__minimapFreeformExecuted,
+					onError: window.__minimapFreeformOnError,
+				} ) )
+			)
+			.toEqual( { executed: undefined, onError: undefined } );
+		expect( sentinelRequests ).toEqual( [] );
+	} );
 } );
