@@ -10,7 +10,7 @@
  * Author URI:        https://earthbound.com
  * License:           GPLv2 or later
  * License URI:       https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
- * Text Domain:       minimap
+ * Text Domain:       block-minimap
  *
  * @package minimap
  */
@@ -28,5 +28,11 @@ function gcm_block_enqueue_scripts() {
 		'1.0.1',
 		true
 	);
+
+	/*
+	 * Registers the script's translations, so the strings the bundle
+	 * translates against this domain can actually be translated.
+	 */
+	wp_set_script_translations( 'minimap', 'block-minimap' );
 }
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\gcm_block_enqueue_scripts' );
