@@ -3,7 +3,7 @@
  */
 import { blockClasses, blockTitle, toHtml } from './utils';
 
-const { getBlockType } = wp.blocks;
+const { getBlockContent, getBlockType } = wp.blocks;
 const { BlockIcon } = wp.blockEditor;
 const { __, sprintf } = wp.i18n;
 
@@ -61,7 +61,20 @@ export const renderChip = ( block ) => chip( block );
  * @return {Function} A renderer for that block.
  */
 export const renderRaw = ( attributeName ) => ( block ) => {
-	const source = toHtml( block.attributes[ attributeName ] ).trim();
+	let source = toHtml( block.attributes[ attributeName ] ).trim();
+
+	/*
+	 * WordPress 7.1 deprecated the Custom HTML block's content attribute:
+	 * the markup lives in the block's inner content now, so serialize it
+	 * back out when the attribute is empty.
+	 */
+	if ( ! source ) {
+		try {
+			source = ( getBlockContent( block ) || '' ).trim();
+		} catch ( error ) {
+			source = '';
+		}
+	}
 
 	if ( ! source ) {
 		return renderChip( block );
