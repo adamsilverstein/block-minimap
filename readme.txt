@@ -32,6 +32,7 @@ Development takes place in the [GitHub repository](https://github.com/adamsilver
 
 = 1.0.1 =
 * Confirm compatibility with WordPress 7.1.
+* Declare the editor script dependencies (lodash, wp-components, wp-data, wp-edit-post, wp-element, wp-i18n, wp-plugins). Without them the minimap failed to load with "lodash is not defined".
 
 = 1.0.0 =
 Added
