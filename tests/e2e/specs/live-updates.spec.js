@@ -62,12 +62,13 @@ test.describe( 'Live updates', () => {
 	test( 'loses an entry when a block is removed', async ( {
 		page,
 		editor,
+		pageUtils,
 	} ) => {
 		await editor.insertBlock( {
 			name: 'core/paragraph',
 			attributes: { content: 'Keep me' },
 		} );
-		const doomed = await editor.insertBlock( {
+		await editor.insertBlock( {
 			name: 'core/paragraph',
 			attributes: { content: 'Remove me' },
 		} );
@@ -75,11 +76,11 @@ test.describe( 'Live updates', () => {
 		await openMinimap( page );
 		await expect( getMinimapBlocks( page ) ).toHaveCount( 2 );
 
-		await page.evaluate( ( clientId ) => {
-			window.wp.data
-				.dispatch( 'core/block-editor' )
-				.removeBlock( clientId );
-		}, doomed.clientId );
+		await editor.canvas
+			.getByRole( 'document', { name: /^Block: Paragraph/ } )
+			.last()
+			.click();
+		await pageUtils.pressKeys( 'access+z' );
 
 		await expect( getMinimapBlocks( page ) ).toHaveCount( 1 );
 		await expect( getMinimap( page ).locator( '.core-paragraph' ) ).toHaveText(
@@ -95,7 +96,7 @@ test.describe( 'Live updates', () => {
 			name: 'core/paragraph',
 			attributes: { content: 'First' },
 		} );
-		const second = await editor.insertBlock( {
+		await editor.insertBlock( {
 			name: 'core/paragraph',
 			attributes: { content: 'Second' },
 		} );
@@ -106,11 +107,14 @@ test.describe( 'Live updates', () => {
 			'Second',
 		] );
 
-		await page.evaluate( ( clientId ) => {
-			window.wp.data
-				.dispatch( 'core/block-editor' )
-				.moveBlocksUp( [ clientId ] );
-		}, second.clientId );
+		await editor.canvas
+			.getByRole( 'document', { name: /^Block: Paragraph/ } )
+			.last()
+			.click();
+		await page
+			.getByRole( 'toolbar', { name: 'Block tools' } )
+			.getByRole( 'button', { name: 'Move up' } )
+			.click();
 
 		await expect( getMinimapBlocks( page ) ).toHaveText( [
 			'Second',
@@ -135,7 +139,7 @@ test.describe( 'Live updates', () => {
 		] );
 
 		await editor.canvas
-			.getByRole( 'document', { name: /^Block: List item/ } )
+			.getByRole( 'document', { name: /^Block: List Item/ } )
 			.click();
 		await page.keyboard.press( 'End' );
 		await page.keyboard.press( 'Enter' );
