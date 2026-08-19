@@ -3,9 +3,30 @@
  */
 import { renderChip, renderMissing, renderRaw } from './generic';
 import { renderColumns, renderContainer } from './containers';
-import { renderHeading, renderList, renderText } from './text';
-import { renderCover, renderImage } from './media';
-import { renderSeparator } from './chrome';
+import {
+	renderCode,
+	renderDetails,
+	renderHeading,
+	renderList,
+	renderPreformatted,
+	renderPullquote,
+	renderQuote,
+	renderTable,
+	renderText,
+} from './text';
+import {
+	renderAudio,
+	renderCover,
+	renderEmbed,
+	renderFile,
+	renderGallery,
+	renderImage,
+	renderMediaShape,
+	renderMediaText,
+	renderVideo,
+} from './media';
+import { renderMarker, renderSeparator, renderSpacer } from './chrome';
+import { renderPills } from './pills';
 
 const { getBlockType } = wp.blocks;
 
@@ -15,17 +36,42 @@ const { getBlockType } = wp.blocks;
  * here rather than editing a growing conditional.
  */
 const registry = {
+	'core/audio': renderAudio,
+	'core/avatar': renderMediaShape( 'aspect-square' ),
+	'core/buttons': renderPills,
+	'core/categories': renderPills,
+	'core/code': renderCode,
 	'core/columns': renderColumns,
 	'core/cover': renderCover,
+	'core/details': renderDetails,
+	'core/embed': renderEmbed,
+	'core/file': renderFile,
 	'core/freeform': renderRaw( 'content' ),
+	'core/gallery': renderGallery,
 	'core/heading': renderHeading,
 	'core/html': renderRaw( 'content' ),
 	'core/image': renderImage,
 	'core/list': renderList,
+	'core/media-text': renderMediaText,
 	'core/missing': renderMissing,
+	'core/more': renderMarker,
+	'core/navigation': renderPills,
+	'core/nextpage': renderMarker,
+	'core/page-list': renderPills,
 	'core/paragraph': renderText,
+	'core/post-featured-image': renderMediaShape( 'aspect-wide' ),
+	'core/preformatted': renderPreformatted,
+	'core/pullquote': renderPullquote,
+	'core/quote': renderQuote,
 	'core/separator': renderSeparator,
 	'core/shortcode': renderRaw( 'text' ),
+	'core/site-logo': renderMediaShape( 'aspect-square' ),
+	'core/social-links': renderPills,
+	'core/spacer': renderSpacer,
+	'core/table': renderTable,
+	'core/tag-cloud': renderPills,
+	'core/verse': renderPreformatted,
+	'core/video': renderVideo,
 };
 
 /**

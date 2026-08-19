@@ -151,3 +151,113 @@ img.minimap-media {
 .minimap-media-placeholder.aspect-band {
 	min-height: 24px;
 }
+
+/* Lists of links read as a row of small pills. */
+.minimap-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 3px;
+	background: none;
+}
+
+.minimap-pill {
+	background-color: #e0e0e0;
+	border-radius: 8px;
+	padding: 2px 6px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 100%;
+}
+
+/* The More and Page Break markers draw as a labeled dashed rule. */
+.minimap-marker {
+	border-top: 1px dashed #949494;
+	color: #757575;
+	text-align: center;
+	padding-top: 1px;
+	background: none;
+}
+
+/* A spacer is the gap itself; the height comes from the block. */
+.minimap-spacer {
+	background: none;
+	padding: 0;
+	min-height: 0;
+}
+
+/* A gallery reads as a strip of small thumbnails. */
+.minimap-gallery {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px;
+}
+
+.minimap-gallery__thumb {
+	max-height: 28px;
+}
+
+/* Quotes and pullquotes keep their left rule. */
+blockquote.minimap-block {
+	border-left: 3px solid #ccc;
+	padding-left: 6px;
+	margin: 0 0 10px;
+}
+
+blockquote.minimap-block cite {
+	display: block;
+	color: #757575;
+	font-style: italic;
+}
+
+pre.minimap-pre {
+	margin: 0 0 10px;
+	font-size: .65em;
+	line-height: 1.2;
+	white-space: pre-wrap;
+	word-break: break-word;
+	display: -webkit-box;
+	-webkit-line-clamp: 4;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.minimap-block.core-table table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+.minimap-block.core-table th,
+.minimap-block.core-table td {
+	border: 1px solid #e0e0e0;
+	padding: 1px 2px;
+	text-align: left;
+}
+
+.minimap-details-summary {
+	font-weight: 600;
+}
+
+/* Media & text splits into its two halves. */
+.minimap-media-text {
+	display: flex;
+	gap: 4px;
+	align-items: flex-start;
+}
+
+.minimap-media-text.is-media-right {
+	flex-direction: row-reverse;
+}
+
+.minimap-media-text__media {
+	flex: 0 0 auto;
+}
+
+.minimap-media-text__media .minimap-media-placeholder.aspect-square {
+	width: 32px;
+}
+
+.minimap-media-text__content {
+	flex: 1;
+	min-width: 0;
+}
