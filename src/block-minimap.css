@@ -92,9 +92,13 @@
 	border-left: 2px solid #e0e0e0;
 }
 
-.minimap-container .minimap-block,
-.minimap-columns .minimap-block,
-.minimap-cover__inner .minimap-block {
+/*
+ * Any entry drawn inside another one gives up the fixed column width: the
+ * wrapper's own border, padding or sibling has already taken some of it.
+ * Matching on nesting rather than on each wrapper's class keeps quotes,
+ * details, media & text and every future wrapper covered by one rule.
+ */
+.minimap-block .minimap-block {
 	width: auto;
 	margin-bottom: 4px;
 }
