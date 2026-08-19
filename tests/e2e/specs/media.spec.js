@@ -216,4 +216,23 @@ test.describe( 'Media rendering', () => {
 		await expect( chip ).toHaveClass( /minimap-chip/ );
 		await expect( chip ).toHaveText( 'annual-report.pdf' );
 	} );
+
+	test( 'decodes entities in a file name rather than showing the source', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( {
+			name: 'core/file',
+			attributes: {
+				href: '/tom-and-jerry.pdf',
+				fileName: 'Tom &amp; Jerry.pdf',
+			},
+		} );
+
+		await openMinimap( page );
+
+		await expect( getMinimap( page ).locator( '.core-file' ) ).toHaveText(
+			'Tom & Jerry.pdf'
+		);
+	} );
 } );

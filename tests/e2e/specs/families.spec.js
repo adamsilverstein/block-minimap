@@ -80,6 +80,28 @@ test.describe( 'Renderer families', () => {
 		await expect( pills ).toHaveText( [ 'Subscribe', 'Learn more' ] );
 	} );
 
+	test( 'decodes entities in a pill label rather than showing the source', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( {
+			name: 'core/buttons',
+			innerBlocks: [
+				{
+					name: 'core/button',
+					attributes: { text: 'Fish &amp; Chips' },
+				},
+			],
+		} );
+
+		await openMinimap( page );
+
+		// The label is drawn as text, so the entity has to be resolved first.
+		await expect(
+			getMinimap( page ).locator( '.core-buttons .minimap-pill' )
+		).toHaveText( 'Fish & Chips' );
+	} );
+
 	test( 'renders social links as a pill per service', async ( {
 		page,
 		editor,

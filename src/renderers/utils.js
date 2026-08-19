@@ -10,10 +10,25 @@ export const toHtml = ( value ) => ( value ? String( value ) : '' );
  * Reduces a rich text attribute to plain text, for places that render it as a
  * text node rather than markup.
  *
+ * Parses the markup rather than stripping tags with a regular expression, so
+ * entities resolve to the characters they stand for: a button labeled
+ * `Fish &amp; Chips` reads as `Fish & Chips` and not as its own source. The
+ * parsed document is inert, so nothing in the markup runs or loads.
+ *
  * @param {*} value A rich text attribute.
- * @return {string} The text without tags.
+ * @return {string} The text without tags or entities.
  */
-export const toPlainText = ( value ) => toHtml( value ).replace( /<[^>]+>/g, '' );
+export const toPlainText = ( value ) => {
+	const html = toHtml( value );
+
+	if ( ! html ) {
+		return '';
+	}
+
+	const parsed = new window.DOMParser().parseFromString( html, 'text/html' );
+
+	return parsed.body.textContent || '';
+};
 
 /**
  * The classes every minimap entry carries: `minimap-block` for shared styling
