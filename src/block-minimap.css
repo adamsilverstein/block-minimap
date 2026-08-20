@@ -2,7 +2,7 @@
 	background-color: #fefefe;
 	width: 240px;
 	min-height: 10px;
-	margin-bottom:10px;
+	margin-bottom: 10px;
 	font-size: .7em;
 	line-height: 1;
 	padding: 2px;
@@ -17,4 +17,251 @@
 .minimap-block.core-list ul {
 	padding-left: 10px;
 	list-style: disc;
+}
+
+/* Text bands clamp so a long paragraph reads as a band, not a wall. */
+.minimap-text {
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	line-height: 1.2;
+}
+
+/* Tier 1 fallback: the block's icon and title in a band. */
+.minimap-chip {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	background-color: #f6f7f7;
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	color: #1e1e1e;
+}
+
+.minimap-chip .block-editor-block-icon {
+	width: 14px;
+	height: 14px;
+	min-width: 14px;
+}
+
+.minimap-chip .block-editor-block-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+.minimap-chip__label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Chip height approximates how much room the category tends to occupy. */
+.minimap-chip.category-media,
+.minimap-chip.category-embed {
+	min-height: 36px;
+}
+
+.minimap-chip.category-design,
+.minimap-chip.category-theme {
+	min-height: 24px;
+}
+
+/* An unresolved block is something the author wants to notice. */
+.minimap-chip.minimap-missing {
+	background-color: #fcf0f1;
+	border: 1px dashed #cc1818;
+	color: #cc1818;
+}
+
+/* Raw markup blocks show their escaped source as tiny code. */
+.minimap-raw pre {
+	margin: 0;
+	font-size: .9em;
+	white-space: pre-wrap;
+	word-break: break-word;
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+/* Containers mirror the document tree; the border makes nesting legible. */
+.minimap-container {
+	padding: 2px 0 0 6px;
+	border-left: 2px solid #e0e0e0;
+}
+
+/*
+ * Any entry drawn inside another one gives up the fixed column width: the
+ * wrapper's own border, padding or sibling has already taken some of it.
+ * Matching on nesting rather than on each wrapper's class keeps quotes,
+ * details, media & text and every future wrapper covered by one rule.
+ */
+.minimap-block .minimap-block {
+	width: auto;
+	margin-bottom: 4px;
+}
+
+/* Columns lay out side by side; the horizontal split is the point. */
+.minimap-columns {
+	display: flex;
+	gap: 4px;
+}
+
+.minimap-columns > .minimap-block {
+	flex: 1;
+	min-width: 0;
+}
+
+/* Stands in for anything nested past the depth cap. */
+.minimap-truncated {
+	color: #757575;
+	font-style: italic;
+}
+
+.minimap-cover__media {
+	margin-bottom: 2px;
+}
+
+/* Media thumbnails keep their shape at sidebar scale. */
+img.minimap-media {
+	display: block;
+	width: auto;
+	max-width: 100%;
+	max-height: 64px;
+}
+
+.minimap-media-placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: #f0f0f1;
+	border: 1px dashed #ccc;
+	color: #757575;
+	text-align: center;
+}
+
+.minimap-media-placeholder.aspect-wide {
+	width: 120px;
+	aspect-ratio: 16 / 9;
+}
+
+.minimap-media-placeholder.aspect-square {
+	width: 48px;
+	aspect-ratio: 1;
+}
+
+.minimap-media-placeholder.aspect-band {
+	min-height: 24px;
+}
+
+/* Lists of links read as a row of small pills. */
+.minimap-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 3px;
+	background: none;
+}
+
+.minimap-pill {
+	background-color: #e0e0e0;
+	border-radius: 8px;
+	padding: 2px 6px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 100%;
+}
+
+/* The More and Page Break markers draw as a labeled dashed rule. */
+.minimap-marker {
+	border-top: 1px dashed #949494;
+	color: #757575;
+	text-align: center;
+	padding-top: 1px;
+	background: none;
+}
+
+/* A spacer is the gap itself; the height comes from the block. */
+.minimap-spacer {
+	background: none;
+	padding: 0;
+	min-height: 0;
+}
+
+/* A gallery reads as a strip of small thumbnails. */
+.minimap-gallery {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px;
+}
+
+img.minimap-media.minimap-gallery__thumb {
+	max-height: 28px;
+}
+
+/* Quotes and pullquotes keep their left rule. */
+blockquote.minimap-block {
+	border-left: 3px solid #ccc;
+	padding-left: 6px;
+	margin: 0 0 10px;
+}
+
+blockquote.minimap-block cite {
+	display: block;
+	color: #757575;
+	font-style: italic;
+}
+
+pre.minimap-pre {
+	margin: 0 0 10px;
+	font-size: .65em;
+	line-height: 1.2;
+	white-space: pre-wrap;
+	word-break: break-word;
+	display: -webkit-box;
+	-webkit-line-clamp: 4;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.minimap-block.core-table table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+.minimap-block.core-table th,
+.minimap-block.core-table td {
+	border: 1px solid #e0e0e0;
+	padding: 1px 2px;
+	text-align: left;
+}
+
+.minimap-details-summary {
+	font-weight: 600;
+}
+
+/* Media & text splits into its two halves. */
+.minimap-media-text {
+	display: flex;
+	gap: 4px;
+	align-items: flex-start;
+}
+
+.minimap-media-text.is-media-right {
+	flex-direction: row-reverse;
+}
+
+.minimap-media-text__media {
+	flex: 0 0 auto;
+}
+
+.minimap-media-text__media .minimap-media-placeholder.aspect-square {
+	width: 32px;
+}
+
+.minimap-media-text__content {
+	flex: 1;
+	min-width: 0;
 }

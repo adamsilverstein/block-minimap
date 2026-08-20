@@ -1,175 +1,117 @@
-const { Component } = wp.element;
-const { subscribe } = wp.data;
+const { PureComponent, memo } = wp.element;
+const { subscribe, select } = wp.data;
 const { debounce, map } = lodash;
 import './block-minimap.css';
-
-/*
- * Rich text attributes arrive as RichTextData objects rather than strings, and
- * dangerouslySetInnerHTML needs a string.
- */
-const toHtml = ( value ) => ( value ? String( value ) : '' );
+import { resolveRenderer } from './renderers';
 
 /**
- * Renders a list block as a list.
+ * One block's minimap entry.
  *
- * WordPress 6.1 moved list items out of the block's `values` attribute and into
- * inner `core/list-item` blocks, so read those first and keep `values` as a
- * fallback for content saved before the change. A list item can itself hold a
- * nested list, hence the recursion.
+ * Memoized: the store keeps block objects referentially stable until they
+ * change, so an edit re-renders only the entries on the path to the edited
+ * block, not the whole tree.
  *
- * @param {Object} block A `core/list` block.
- * @param {?number} key  React key, when rendered as one of several siblings.
- * @return {WPElement} The rendered list.
+ * @param {Object} props       Component props.
+ * @param {Object} props.block The block to represent.
+ * @param {number} props.depth How many containers sit above the block.
+ * @return {WPElement} The entry.
  */
-const renderList = ( block, key ) => {
-	const ListTag = block.attributes.ordered ? 'ol' : 'ul';
-	const items = block.innerBlocks || [];
+const MinimapBlock = memo( function MinimapBlock( { block, depth } ) {
+	const renderer = resolveRenderer( block );
 
-	if ( ! items.length ) {
-		return (
-			<ListTag
-				key={ key }
-				dangerouslySetInnerHTML={ {
-					__html: toHtml( block.attributes.values ),
-				} }
-			/>
-		);
-	}
+	return renderer( block, { depth, renderBlocks } );
+} );
 
-	return (
-		<ListTag key={ key }>
-			{ map( items, ( item, i ) => (
-				<li key={ i }>
-					<span
-						dangerouslySetInnerHTML={ {
-							__html: toHtml( item.attributes.content ),
-						} }
-					/>
-					{ map(
-						( item.innerBlocks || [] ).filter(
-							( inner ) => inner.name === 'core/list'
-						),
-						( nested, n ) => renderList( nested, n )
-					) }
-				</li>
-			) ) }
-		</ListTag>
-	);
-};
+/**
+ * Renders a list of blocks as minimap entries.
+ *
+ * Container renderers receive this through their context argument, so the
+ * renderer modules never need to import the component that calls them.
+ *
+ * @param {Array}  blocks Blocks to render.
+ * @param {number} depth  Nesting depth of these blocks.
+ * @return {WPElement[]} One entry per block.
+ */
+function renderBlocks( blocks, depth ) {
+	return map( blocks, ( block ) => (
+		<MinimapBlock key={ block.clientId } block={ block } depth={ depth } />
+	) );
+}
 
-export default class Minimap extends Component {
+/*
+ * A PureComponent with no props: re-renders of the surrounding sidebar
+ * chrome (selection changes, panel toggles) pass the minimap by, and only
+ * its own state — the block tree and the post title — redraws it.
+ */
+export default class Minimap extends PureComponent {
 	constructor( props ) {
 		super( props );
 
 		this.state = {
-			blocks: wp.data.select( 'core/block-editor' ).getBlocks(),
-		}
-		this.checkForUpdates = this.checkForUpdates.bind( this );
-		this.checkForUpdates = debounce( this.checkForUpdates, 250 );
+			blocks: select( 'core/block-editor' ).getBlocks(),
+			title: select( 'core/editor' ).getEditedPostAttribute( 'title' ),
+		};
+		this.checkForUpdates = debounce(
+			this.checkForUpdates.bind( this ),
+			250
+		);
 	}
 
 	componentDidMount() {
 		this.unsubscribe = subscribe( this.checkForUpdates );
+		this.countRender();
+	}
+
+	componentDidUpdate() {
+		this.countRender();
+	}
+
+	/*
+	 * Test hook: lets the end-to-end suite assert how often the minimap
+	 * actually redraws.
+	 */
+	countRender() {
+		window.__blockMinimapRenders =
+			( window.__blockMinimapRenders || 0 ) + 1;
 	}
 
 	componentWillUnmount() {
+		// A pending debounced call would otherwise set state after unmount.
+		this.checkForUpdates.cancel();
 		this.unsubscribe();
 	}
 
 	checkForUpdates() {
-			const blocks =  wp.data.select( 'core/block-editor' ).getBlocks();
-			this.setState(
-				{
-					blocks
-				}
-			);
+		const blocks = select( 'core/block-editor' ).getBlocks();
+		const title = select( 'core/editor' ).getEditedPostAttribute(
+			'title'
+		);
+
+		/*
+		 * The subscription fires on every store change — selection moves,
+		 * UI toggles — but the store keeps getBlocks() referentially stable
+		 * until the tree actually changes, so an unchanged reference and
+		 * title mean there is nothing to redraw.
+		 */
+		if (
+			blocks === this.state.blocks &&
+			title === this.state.title
+		) {
+			return;
+		}
+
+		this.setState( { blocks, title } );
 	}
 
 	render() {
-		const { blocks } = this.state;
-		const title  = wp.data.select( 'core/editor' ).getEditedPostAttribute( 'title' );
+		const { blocks, title } = this.state;
 
 		return (
-			<div
-				id="minimap-container"
-				style={ { height: '100%' } }
-			>
-				<div className="minimap-block title">
-					{ title }
-				</div>
+			<div id="minimap-container" style={ { height: '100%' } }>
+				<div className="minimap-block title">{ title }</div>
 
-				{
-					blocks &&
-						map( blocks, ( block, i ) => {
-							switch ( block.name ) {
-								case 'core/cover':
-								case 'core/image':
-									return (
-										<img
-											key={ i }
-											src={ block.attributes.url }
-											className={ `minimap-block ${ block.name.replace( '/', '-' ) }` }
-										/>
-									);
-									break;
-
-								case 'core/separator':
-									return (
-										<hr
-											key={ i }
-										/>
-									);
-									break;
-
-
-								case 'core/list':
-										return (
-											<div
-												key={ i }
-												className={ `minimap-block ${ block.name.replace( '/', '-' ) }` }
-											>
-												{ renderList( block ) }
-											</div>
-										);
-										break;
-
-								case 'core/paragraph':
-									return (
-										<div
-											key={ i }
-											className={ `minimap-block ${ block.name.replace( '/', '-' ) }` }dangerouslySetInnerHTML={ {
-												__html: block.attributes.content
-											} }
-										/>
-									);
-									break;
-
-								case 'core/heading':
-										const CustomTag = `h${ block.attributes.level }`;
-
-										return (
-											<CustomTag
-												key={ i }
-												className={ `minimap-block ${ block.name.replace( '/', '-' ) }` }
-												dangerouslySetInnerHTML={ {
-													__html: block.attributes.content
-												} }
-											/>
-
-										);
-										break;
-
-								default:
-									return (
-										<div
-											key={ i }
-											className={ `minimap-block ${ block.name.replace( '/', '-' ) }` }
-										/>
-									);
-							}
-						} )
-				}
+				{ blocks && renderBlocks( blocks, 0 ) }
 			</div>
 		);
 	}
-};
+}

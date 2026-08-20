@@ -4,7 +4,7 @@ Tags: Minimap, mini-map, Gutenberg, Block, block editor
 Requires at least: 5.0
 Tested up to: 7.1
 Requires PHP: 5.6
-Stable tag: 1.0.1
+Stable tag: 1.1.0
 License: GPL-2.0
 License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
@@ -29,6 +29,12 @@ Development takes place in the [GitHub repository](https://github.com/adamsilver
 3. Use Block Minimap!
 
 == Changelog ==
+
+= 1.1.0 =
+* Minimap representations for all block types, including third party blocks.
+* Nested blocks render as the document tree, with Columns side by side.
+* Quotes, tables, code, galleries, media, buttons, social links, embeds and document chrome each render in their own shape.
+* Custom HTML, shortcode and classic blocks render as escaped source rather than live markup.
 
 = 1.0.1 =
 * Confirm compatibility with WordPress 7.1.

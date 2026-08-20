@@ -20,6 +20,22 @@ New features and enhancements are also managed via [issues](https://github.com/a
 
 Pull requests represent a proposed solution to a specified problem. They should always reference an issue that describes the problem and contains discussion about the problem itself. Discussion on pull requests should be limited to the pull request itself, i.e. code review.
 
+## Adding a block renderer
+
+The minimap draws blocks through a renderer registry in `src/renderers/index.js`.
+A block resolves to, in order: its exact registry entry, the container family
+(anything with `innerBlocks`), a category default, and finally a generic chip
+built from the block's registered icon and title — so every block already
+renders something recognizable, and a bespoke renderer is only worth adding
+where a distinctive shape carries more information than a label.
+
+To add one, export a `( block, context ) => element` function from the
+matching module under `src/renderers/` and register it against the block name.
+Rich text attributes may be rendered as markup (the editor sanitizes them);
+attributes holding arbitrary author markup must be rendered as escaped text.
+Give media an `alt` attribute and a no-URL placeholder path, and cover the new
+renderer in `tests/e2e/specs/`.
+
 ## Running the tests
 
 The minimap is covered by end-to-end tests that drive a real block editor, so

@@ -65,9 +65,37 @@ test.describe( 'Block rendering', () => {
 
 		await openMinimap( page );
 
-		await expect(
-			getMinimap( page ).locator( 'img.core-image' )
-		).toHaveAttribute( 'src', TEST_IMAGE_URL );
+		const image = getMinimap( page ).locator( 'img.core-image' );
+		await expect( image ).toHaveAttribute( 'src', TEST_IMAGE_URL );
+		await expect( image ).toHaveAttribute( 'alt', 'A logo' );
+	} );
+
+	test( 'labels an image with no URL instead of rendering a broken img', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( { name: 'core/image' } );
+
+		await openMinimap( page );
+
+		await expect( getMinimap( page ).locator( '.core-image' ) ).toHaveText(
+			'Image'
+		);
+		await expect( getMinimap( page ).locator( 'img' ) ).toHaveCount( 0 );
+	} );
+
+	test( 'labels a cover with no URL instead of rendering a broken img', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( { name: 'core/cover' } );
+
+		await openMinimap( page );
+
+		await expect( getMinimap( page ).locator( '.core-cover' ) ).toHaveText(
+			'Cover'
+		);
+		await expect( getMinimap( page ).locator( 'img' ) ).toHaveCount( 0 );
 	} );
 
 	test( 'renders a cover block as an image with the block URL', async ( {
@@ -173,7 +201,7 @@ test.describe( 'Block rendering', () => {
 		).toHaveText( 'Child' );
 	} );
 
-	test( 'falls back to an empty placeholder for unsupported blocks', async ( {
+	test( 'renders code content rather than an empty box', async ( {
 		page,
 		editor,
 	} ) => {
@@ -184,9 +212,141 @@ test.describe( 'Block rendering', () => {
 
 		await openMinimap( page );
 
-		const placeholder = getMinimap( page ).locator( '.core-code' );
-		await expect( placeholder ).toHaveCount( 1 );
-		await expect( placeholder ).toBeEmpty();
+		await expect( getMinimap( page ).locator( '.core-code' ) ).toHaveText(
+			'const answer = 42;'
+		);
+	} );
+
+	test( 'renders a quote with its content and citation', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( {
+			name: 'core/quote',
+			attributes: { citation: 'Someone wise' },
+			innerBlocks: [
+				{
+					name: 'core/paragraph',
+					attributes: { content: 'Quoted words' },
+				},
+			],
+		} );
+
+		await openMinimap( page );
+
+		const quote = getMinimap( page ).locator( 'blockquote.core-quote' );
+		await expect( quote ).toContainText( 'Quoted words' );
+		await expect( quote.locator( 'cite' ) ).toHaveText( 'Someone wise' );
+	} );
+
+	test( 'renders a pullquote with its content and citation', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( {
+			name: 'core/pullquote',
+			attributes: { value: 'Pulled out', citation: 'A source' },
+		} );
+
+		await openMinimap( page );
+
+		const pullquote = getMinimap( page ).locator(
+			'blockquote.core-pullquote'
+		);
+		await expect( pullquote ).toContainText( 'Pulled out' );
+		await expect( pullquote.locator( 'cite' ) ).toHaveText( 'A source' );
+	} );
+
+	test( 'renders verse and preformatted blocks as preformatted text', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( {
+			name: 'core/verse',
+			attributes: { content: 'Roses are red' },
+		} );
+		await editor.insertBlock( {
+			name: 'core/preformatted',
+			attributes: { content: 'exactly  as  typed' },
+		} );
+
+		await openMinimap( page );
+
+		await expect(
+			getMinimap( page ).locator( 'pre.core-verse' )
+		).toHaveText( 'Roses are red' );
+		await expect(
+			getMinimap( page ).locator( 'pre.core-preformatted' )
+		).toHaveText( 'exactly  as  typed' );
+	} );
+
+	test( 'renders a table with its rows and header cells', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( {
+			name: 'core/table',
+			attributes: {
+				head: [
+					{
+						cells: [
+							{ content: 'Name', tag: 'th' },
+							{ content: 'Amount', tag: 'th' },
+						],
+					},
+				],
+				body: [
+					{
+						cells: [
+							{ content: 'Flour', tag: 'td' },
+							{ content: '500g', tag: 'td' },
+						],
+					},
+					{
+						cells: [
+							{ content: 'Water', tag: 'td' },
+							{ content: '350ml', tag: 'td' },
+						],
+					},
+				],
+			},
+		} );
+
+		await openMinimap( page );
+
+		const table = getMinimap( page ).locator( '.core-table table' );
+		await expect( table.locator( 'th' ) ).toHaveText( [
+			'Name',
+			'Amount',
+		] );
+		await expect( table.locator( 'tbody tr' ) ).toHaveCount( 2 );
+		await expect( table.locator( 'td' ).nth( 2 ) ).toHaveText( 'Water' );
+	} );
+
+	test( 'renders a details block with its summary and children', async ( {
+		page,
+		editor,
+	} ) => {
+		await editor.insertBlock( {
+			name: 'core/details',
+			attributes: { summary: 'The fine print' },
+			innerBlocks: [
+				{
+					name: 'core/paragraph',
+					attributes: { content: 'Hidden by default' },
+				},
+			],
+		} );
+
+		await openMinimap( page );
+
+		const details = getMinimap( page ).locator( '.core-details' );
+		await expect(
+			details.locator( '.minimap-details-summary' )
+		).toHaveText( 'The fine print' );
+		await expect( details.locator( '.core-paragraph' ) ).toHaveText(
+			'Hidden by default'
+		);
 	} );
 
 	test( 'keeps minimap entries in the same order as the editor', async ( {

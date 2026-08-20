@@ -81,4 +81,49 @@ test.describe( 'Console output', () => {
 
 		expect( deprecations ).toEqual( [] );
 	} );
+
+	/*
+	 * The old renderer emitted `<img src={undefined}>` for media blocks with
+	 * no URL yet, which React renders as an img with no src at all: a broken
+	 * image glyph. The canvas iframe fetches whatever it likes; only top
+	 * frame image requests can come from the minimap, so any img the minimap
+	 * renders must carry a src and that src must resolve.
+	 */
+	test( 'fires no broken image requests for media blocks with no URL', async ( {
+		admin,
+		editor,
+		page,
+	} ) => {
+		const brokenImages = [];
+		page.on( 'response', ( response ) => {
+			const request = response.request();
+			if (
+				request.resourceType() === 'image' &&
+				request.frame() === page.mainFrame() &&
+				response.status() >= 400
+			) {
+				brokenImages.push( `${ response.status() } ${ request.url() }` );
+			}
+		} );
+
+		await admin.createNewPost( { title: 'No broken images' } );
+		for ( const name of [
+			'core/image',
+			'core/cover',
+			'core/gallery',
+			'core/video',
+			'core/audio',
+			'core/media-text',
+		] ) {
+			await editor.insertBlock( { name } );
+		}
+
+		await openMinimap( page );
+		await expect( getMinimap( page ) ).toBeVisible();
+
+		await expect(
+			getMinimap( page ).locator( 'img:not([src])' )
+		).toHaveCount( 0 );
+		expect( brokenImages ).toEqual( [] );
+	} );
 } );
