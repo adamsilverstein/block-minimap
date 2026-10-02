@@ -12,13 +12,13 @@ A Minimap for the WordPress block editor (Gutenberg).
 
 == Description ==
 
-Development takes place in the [GitHub repository](https://github.com/adamsilverstein/minimap).
+Development takes place in the [GitHub repository](https://github.com/adamsilverstein/block-minimap).
 
 === Technical Notes ===
 
 * Requires PHP 5.6+.
 * Requires [WordPress](http://wordpress.org/) 5.2+
-* Issues and Pull requests welcome in the [GitHub repository](https://github.com/adamsilverstein/minimap).
+* Issues and Pull requests welcome in the [GitHub repository](https://github.com/adamsilverstein/block-minimap).
 
 == Screenshots ==
 
