@@ -7,6 +7,18 @@ import { renderInner } from './containers';
 
 const { map } = lodash;
 
+/**
+ * Wraps rich text in an inline span, so a compact minimap can draw each
+ * line of it as a bar: an inline background follows the text line by line,
+ * and stops where the last line does.
+ *
+ * @param {string} html Markup to wrap.
+ * @return {WPElement} The span.
+ */
+const ink = ( html ) => (
+	<span className="minimap-ink" dangerouslySetInnerHTML={ { __html: html } } />
+);
+
 /*
  * Text renderers pass rich text attributes to dangerouslySetInnerHTML. That is
  * defensible because the editor already sanitizes rich text; blocks holding
@@ -31,10 +43,9 @@ export const renderText = ( block ) => {
 	}
 
 	return (
-		<div
-			className={ blockClasses( block, 'minimap-text' ) }
-			dangerouslySetInnerHTML={ { __html: content } }
-		/>
+		<div className={ blockClasses( block, 'minimap-text' ) }>
+			{ ink( content ) }
+		</div>
 	);
 };
 
@@ -92,11 +103,7 @@ const renderListItems = ( block, key ) => {
 		<ListTag key={ key }>
 			{ map( items, ( item, i ) => (
 				<li key={ item.clientId || i }>
-					<span
-						dangerouslySetInnerHTML={ {
-							__html: toHtml( item.attributes.content ),
-						} }
-					/>
+					{ ink( toHtml( item.attributes.content ) ) }
 					{ map(
 						( item.innerBlocks || [] ).filter(
 							( inner ) => inner.name === 'core/list'
@@ -159,10 +166,7 @@ export const renderQuote = ( block, ctx ) => {
 			{ hasChildren ? (
 				renderInner( block, ctx )
 			) : (
-				<div
-					className="minimap-text"
-					dangerouslySetInnerHTML={ { __html: value } }
-				/>
+				<div className="minimap-text">{ ink( value ) }</div>
 			) }
 			{ citation && (
 				<cite dangerouslySetInnerHTML={ { __html: citation } } />
@@ -187,10 +191,7 @@ export const renderPullquote = ( block ) => {
 
 	return (
 		<blockquote className={ blockClasses( block ) }>
-			<div
-				className="minimap-text"
-				dangerouslySetInnerHTML={ { __html: value } }
-			/>
+			<div className="minimap-text">{ ink( value ) }</div>
 			{ citation && (
 				<cite dangerouslySetInnerHTML={ { __html: citation } } />
 			) }
@@ -212,10 +213,9 @@ export const renderPreformatted = ( block ) => {
 	}
 
 	return (
-		<pre
-			className={ blockClasses( block, 'minimap-pre' ) }
-			dangerouslySetInnerHTML={ { __html: content } }
-		/>
+		<pre className={ blockClasses( block, 'minimap-pre' ) }>
+			{ ink( content ) }
+		</pre>
 	);
 };
 
@@ -237,7 +237,7 @@ export const renderCode = ( block ) => {
 
 	return (
 		<pre className={ blockClasses( block, 'minimap-pre' ) }>
-			<code dangerouslySetInnerHTML={ { __html: content } } />
+			<code>{ ink( content ) }</code>
 		</pre>
 	);
 };
@@ -272,12 +272,9 @@ export const renderTable = ( block ) => {
 										cell.tag === 'th' ? 'th' : 'td';
 
 									return (
-										<CellTag
-											key={ cellIndex }
-											dangerouslySetInnerHTML={ {
-												__html: toHtml( cell.content ),
-											} }
-										/>
+										<CellTag key={ cellIndex }>
+											{ ink( toHtml( cell.content ) ) }
+										</CellTag>
 									);
 								} ) }
 							</tr>
