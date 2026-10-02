@@ -1,7 +1,7 @@
 === Block Minimap ===
 Contributors:  adamsilverstein
 Tags: Minimap, mini-map, Gutenberg, Block, block editor
-Requires at least: 5.0
+Requires at least: 5.4
 Tested up to: 7.1
 Requires PHP: 5.6
 Stable tag: 1.1.0
@@ -16,8 +16,6 @@ Development takes place in the [GitHub repository](https://github.com/adamsilver
 
 === Technical Notes ===
 
-* Requires PHP 5.6+.
-* Requires [WordPress](http://wordpress.org/) 5.2+
 * Issues and Pull requests welcome in the [GitHub repository](https://github.com/adamsilverstein/block-minimap).
 
 == Screenshots ==

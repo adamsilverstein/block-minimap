@@ -4,7 +4,7 @@
  * Plugin URI:        https://github.com/adamsilverstein/block-minimap
  * Description:       A Block minimap for the WordPress block editor (Gutenberg).
  * Version:           1.1.0
- * Requires at least: 5.0
+ * Requires at least: 5.4
  * Requires PHP:      5.6
  * Author:            adamsilverstein
  * Author URI:        https://earthbound.com

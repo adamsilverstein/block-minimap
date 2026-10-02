@@ -2,7 +2,7 @@
 
 > A minimap for the WordPress block editor (Gutenberg).
 
-[![Support Level](https://img.shields.io/badge/support-active-green.svg)](#support-level) [![Release Version](https://img.shields.io/github/release/adamsilverstein/block-minimap.svg)](https://github.com/adamsilverstein/block-minimap/releases/latest) ![WordPress tested up to version](https://img.shields.io/badge/WordPress-v5.2%20tested-success.svg) [![GPL-2.0 License](https://img.shields.io/github/license/adamsilverstein/block-minimap.svg)](https://github.com/adamsilverstein/block-minimap/blob/master/LICENSE.md)
+[![Support Level](https://img.shields.io/badge/support-active-green.svg)](#support-level) [![Release Version](https://img.shields.io/github/release/adamsilverstein/block-minimap.svg)](https://github.com/adamsilverstein/block-minimap/releases/latest) ![WordPress tested up to version](https://img.shields.io/badge/WordPress-v7.1%20tested-success.svg) [![GPL-2.0 License](https://img.shields.io/github/license/adamsilverstein/block-minimap.svg)](https://github.com/adamsilverstein/block-minimap/blob/master/LICENSE.md)
 
 ## Screenshot
 
@@ -17,7 +17,7 @@ The minimap and the editor scroll together: scrolling the post moves the minimap
 ## Requirements
 
 * PHP 5.6+
-* [WordPress](http://wordpress.org/) 5.2+
+* [WordPress](https://wordpress.org/) 5.4+
 
 ## Installation
 
