@@ -40,6 +40,7 @@ Development takes place in the [GitHub repository](https://github.com/adamsilver
 = 1.1.0 =
 * Minimap representations for all block types, including third party blocks.
 * Nested blocks render as the document tree, with Columns side by side.
+* The minimap and the editor canvas scroll together: scrolling either one scrolls the other to the same content.
 * Quotes, tables, code, galleries, media, buttons, social links, embeds and document chrome each render in their own shape.
 * Custom HTML, shortcode and classic blocks render as escaped source rather than live markup.
 
