@@ -1,24 +1,33 @@
 === Block Minimap ===
 Contributors:  adamsilverstein
-Tags: Minimap, mini-map, Gutenberg, Block, block editor
+Tags: minimap, navigation, block editor, gutenberg, outline
 Requires at least: 5.4
 Tested up to: 7.1
 Requires PHP: 5.6
 Stable tag: 1.1.0
-License: GPL-2.0
+License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
-A Minimap for the WordPress block editor (Gutenberg).
+A minimap for the block editor: see the shape of the whole post at a glance and scroll through it from the sidebar.
 
 == Description ==
 
-Development takes place in the [GitHub repository](https://github.com/adamsilverstein/block-minimap).
+Long posts get hard to navigate in the block editor. Block Minimap adds a sidebar that draws the whole post in miniature, so you can see its structure at a glance and move around it quickly.
 
-=== Technical Notes ===
+* **Every block gets a shape.** Headings, paragraphs, lists, quotes, tables, code, images, galleries, media and text, buttons, social links, embeds and more each render as a small sketch of what they look like in the post. Third party blocks without their own shape fall back to their block icon and title.
+* **Nested blocks show the document tree.** Groups, covers and other container blocks draw their inner blocks inside them, and Columns sit side by side the way they do in the post.
+* **Scroll sync.** The minimap and the editor canvas stay scrolled to the same content. Scroll the post and the minimap follows; scroll the minimap and the post follows.
+* **Safe previews.** Custom HTML, shortcode and classic blocks render as escaped source rather than live markup.
 
-* Issues and Pull requests welcome in the [GitHub repository](https://github.com/adamsilverstein/block-minimap).
+Open the minimap from the Block Minimap item in the editor's Options menu.
+
+Development takes place in the [GitHub repository](https://github.com/adamsilverstein/block-minimap). Issues and pull requests are welcome.
 
 == Screenshots ==
+
+1. The Block Minimap sidebar next to a long post, scrolled in step with the editor canvas.
+2. Nested blocks and Columns rendered side by side in the minimap.
+3. Different block types - images, quotes, tables, code, galleries - each drawn in its own shape.
 
 == Installation ==
 
@@ -41,3 +50,8 @@ Development takes place in the [GitHub repository](https://github.com/adamsilver
 = 1.0.0 =
 Added
 * Initial plugin release 🎉
+
+== Upgrade Notice ==
+
+= 1.1.0 =
+Draws every block type in its own shape, shows nested blocks and Columns as the document tree, and keeps the minimap scrolled in sync with the editor. Now requires WordPress 5.4 or later.
