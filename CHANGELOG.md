@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file, per [the Keep a Changelog standard](http://keepachangelog.com/).
 
+## [Unreleased]
+### Added
+- The minimap and the editor canvas scroll together: scrolling either one scrolls the other to the same content, lined up block by block, and both reach their top and bottom together. ([#52](https://github.com/adamsilverstein/block-minimap/issues/52))
+
 ## [1.1.0]
 ### Added
 - Minimap representations for all block types. A renderer registry resolves an exact match, then a family renderer, then a metadata fallback showing the block's own icon and title, so every block - third party ones included - gets a recognizable entry instead of an anonymous empty box. ([#4](https://github.com/adamsilverstein/block-minimap/issues/4))
