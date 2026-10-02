@@ -6,7 +6,13 @@
 
 ## Screenshot
 
-![Image](https://cl.ly/5dd7d76915ba/Add_New_Post_9_Develop_WordPress__WordPress_2019-10-10_23-45-34.jpg)
+![The Block Minimap sidebar beside a long post in the block editor, showing headings, paragraphs, images, a list, a table, a quote, a gallery and columns in miniature](.github/media/screenshot.png)
+
+## Screencast
+
+The minimap and the editor scroll together: scrolling the post moves the minimap along with it, and scrolling the minimap moves the post.
+
+![Screencast of a long post scrolling down in the block editor with the Block Minimap following along in the sidebar, then the minimap scrolling back up and the post following it](.github/media/screencast.gif)
 
 ## Requirements
 
