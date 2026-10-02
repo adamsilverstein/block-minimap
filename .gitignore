@@ -17,3 +17,6 @@
 
 # Build artifacts from build:dev
 /dist/*.map
+
+# Release zip from npm run plugin-zip
+/block-minimap.zip

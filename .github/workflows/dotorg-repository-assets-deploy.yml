@@ -1,0 +1,25 @@
+name: Plugin asset/readme update
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  master:
+    name: Push to master
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: WordPress.org plugin asset/readme update
+        uses: 10up/action-wordpress-plugin-asset-update@stable
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: block-minimap
+          # Only readme.txt and .wordpress-org/ assets go to SVN, so a
+          # readme change on master can never ship unreleased code.
+          IGNORE_OTHER_FILES: true

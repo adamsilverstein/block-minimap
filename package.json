@@ -6,6 +6,7 @@
   "scripts": {
     "build": "NODE_OPTIONS=--openssl-legacy-provider webpack --mode=production",
     "build:dev": "NODE_OPTIONS=--openssl-legacy-provider webpack --mode=development --devtool cheap-source-map --output-pathinfo",
+    "plugin-zip": "npm run build && bin/plugin-zip.sh",
     "watch": "NODE_OPTIONS=--openssl-legacy-provider webpack --watch --mode=development --devtool cheap-module-eval-source-map --output-pathinfo",
     "format-js": "wp-scripts format-js",
     "env:start": "wp-env start",
