@@ -16,6 +16,11 @@
  */
 namespace BlockMinimap;
 
+// Bail when loaded directly rather than through WordPress.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * The plugin's version, read from its own header.
  *
