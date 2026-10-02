@@ -1,8 +1,9 @@
-const { PureComponent, memo } = wp.element;
+const { PureComponent, cloneElement, createRef, memo } = wp.element;
 const { subscribe, select } = wp.data;
 const { debounce, map } = lodash;
 import './block-minimap.css';
 import { resolveRenderer } from './renderers';
+import ScrollSync, { ENTRY_ATTRIBUTE } from './scroll-sync';
 
 /**
  * One block's minimap entry.
@@ -19,7 +20,10 @@ import { resolveRenderer } from './renderers';
 const MinimapBlock = memo( function MinimapBlock( { block, depth } ) {
 	const renderer = resolveRenderer( block );
 
-	return renderer( block, { depth, renderBlocks } );
+	// Tags the entry with its block, so scrolling can pair the two up.
+	return cloneElement( renderer( block, { depth, renderBlocks } ), {
+		[ ENTRY_ATTRIBUTE ]: block.clientId,
+	} );
 } );
 
 /**
@@ -51,6 +55,7 @@ export default class Minimap extends PureComponent {
 			blocks: select( 'core/block-editor' ).getBlocks(),
 			title: select( 'core/editor' ).getEditedPostAttribute( 'title' ),
 		};
+		this.containerRef = createRef();
 		this.checkForUpdates = debounce(
 			this.checkForUpdates.bind( this ),
 			250
@@ -59,10 +64,14 @@ export default class Minimap extends PureComponent {
 
 	componentDidMount() {
 		this.unsubscribe = subscribe( this.checkForUpdates );
+		this.scrollSync = new ScrollSync( this.containerRef.current );
+		this.scrollSync.start();
 		this.countRender();
 	}
 
 	componentDidUpdate() {
+		// Entries changed height, so line the minimap back up with the canvas.
+		this.scrollSync.syncFromCanvas();
 		this.countRender();
 	}
 
@@ -79,6 +88,7 @@ export default class Minimap extends PureComponent {
 		// A pending debounced call would otherwise set state after unmount.
 		this.checkForUpdates.cancel();
 		this.unsubscribe();
+		this.scrollSync.stop();
 	}
 
 	checkForUpdates() {
@@ -107,8 +117,17 @@ export default class Minimap extends PureComponent {
 		const { blocks, title } = this.state;
 
 		return (
-			<div id="minimap-container" style={ { height: '100%' } }>
-				<div className="minimap-block title">{ title }</div>
+			<div
+				id="minimap-container"
+				ref={ this.containerRef }
+				style={ { height: '100%' } }
+			>
+				<div
+					className="minimap-block title"
+					{ ...{ [ ENTRY_ATTRIBUTE ]: 'title' } }
+				>
+					{ title }
+				</div>
 
 				{ blocks && renderBlocks( blocks, 0 ) }
 			</div>
