@@ -1,17 +1,43 @@
-/.wordpress-org
+# Files and folders left out of the release zip and the WordPress.org SVN
+# deploy. Read by bin/plugin-zip.sh and 10up/action-wordpress-plugin-deploy.
+
+# Version control and CI
 /.git
 /.github
+/.gitattributes
+/.gitignore
+/.distignore
+/.wordpress-org
+
+# Tooling and config
+/.nvmrc
+/.wp-env.json
+/.wp-env.override.json
+/bin
 /node_modules
-/tests
+/package.json
+/package-lock.json
+/playwright.config.js
+/webpack.config.js
+
+# Source and tests
 /src
+/tests
 /artifacts
 /playwright-report
 /test-results
+/dist/*.map
 
-.distignore
-.gitignore
-.wp-env.json
-playwright.config.js
-webpack.config.js
-package.json
-package-lock.json
+# Repository docs and media
+/assets
+/CHANGELOG.md
+/CODE_OF_CONDUCT.md
+/CONTRIBUTING.md
+/CREDITS.md
+/README.md
+
+# Build output
+/block-minimap.zip
+
+# OS cruft
+.DS_Store
