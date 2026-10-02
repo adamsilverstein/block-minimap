@@ -1,9 +1,19 @@
 const { PureComponent, cloneElement, createRef, memo } = wp.element;
 const { subscribe, select } = wp.data;
+const { SelectControl } = wp.components;
+const { __ } = wp.i18n;
 const { debounce, map } = lodash;
 import './block-minimap.css';
 import { resolveRenderer } from './renderers';
 import ScrollSync, { ENTRY_ATTRIBUTE } from './scroll-sync';
+import {
+	METHOD_OPTIONS,
+	SIZES,
+	SIZE_OPTIONS,
+	loadCompact,
+	resolveSize,
+	saveCompact,
+} from './compact';
 
 /**
  * One block's minimap entry.
@@ -54,8 +64,12 @@ export default class Minimap extends PureComponent {
 		this.state = {
 			blocks: select( 'core/block-editor' ).getBlocks(),
 			title: select( 'core/editor' ).getEditedPostAttribute( 'title' ),
+			...loadCompact(),
+			frameHeight: null,
 		};
 		this.containerRef = createRef();
+		this.setCompact = this.setCompact.bind( this );
+		this.measureFrame = this.measureFrame.bind( this );
 		this.checkForUpdates = debounce(
 			this.checkForUpdates.bind( this ),
 			250
@@ -66,10 +80,48 @@ export default class Minimap extends PureComponent {
 		this.unsubscribe = subscribe( this.checkForUpdates );
 		this.scrollSync = new ScrollSync( this.containerRef.current );
 		this.scrollSync.start();
+		/*
+		 * A transform leaves the layout height alone, so the frame around
+		 * the container is sized to the scaled height by hand.
+		 */
+		this.resizeObserver = new window.ResizeObserver( this.measureFrame );
+		this.resizeObserver.observe( this.containerRef.current );
 		this.countRender();
 	}
 
-	componentDidUpdate() {
+	measureFrame() {
+		const container = this.containerRef.current;
+		const frameHeight =
+			this.state.method === 'transform'
+				? Math.ceil(
+						container.offsetHeight *
+							SIZES[ resolveSize( this.state.size ) ]
+				  )
+				: null;
+
+		if ( frameHeight !== this.state.frameHeight ) {
+			this.setState( { frameHeight } );
+		}
+	}
+
+	setCompact( change ) {
+		this.setState( change, () => {
+			saveCompact( {
+				size: this.state.size,
+				method: this.state.method,
+			} );
+			this.measureFrame();
+		} );
+	}
+
+	componentDidUpdate( prevProps, prevState ) {
+		if (
+			prevState.size !== this.state.size ||
+			prevState.method !== this.state.method
+		) {
+			this.measureFrame();
+		}
+
 		// Entries changed height, so line the minimap back up with the canvas.
 		this.scrollSync.syncFromCanvas();
 		this.countRender();
@@ -89,6 +141,7 @@ export default class Minimap extends PureComponent {
 		this.checkForUpdates.cancel();
 		this.unsubscribe();
 		this.scrollSync.stop();
+		this.resizeObserver.disconnect();
 	}
 
 	checkForUpdates() {
@@ -114,22 +167,59 @@ export default class Minimap extends PureComponent {
 	}
 
 	render() {
-		const { blocks, title } = this.state;
+		const { blocks, title, size, method, frameHeight } = this.state;
+		const resolved = resolveSize( size );
+		const scale = SIZES[ resolved ];
+		const classes = [
+			`is-size-${ resolved }`,
+			`is-method-${ method }`,
+			method === 'lines' && scale < 1 && 'is-text-lines',
+		]
+			.filter( Boolean )
+			.join( ' ' );
 
 		return (
-			<div
-				id="minimap-container"
-				ref={ this.containerRef }
-				style={ { height: '100%' } }
-			>
-				<div
-					className="minimap-block title"
-					{ ...{ [ ENTRY_ATTRIBUTE ]: 'title' } }
-				>
-					{ title }
+			<div className="minimap-root">
+				<div className="minimap-controls">
+					<SelectControl
+						label={ __( 'Size', 'block-minimap' ) }
+						value={ size }
+						options={ SIZE_OPTIONS }
+						onChange={ ( value ) =>
+							this.setCompact( { size: value } )
+						}
+						__nextHasNoMarginBottom
+					/>
+					<SelectControl
+						label={ __( 'Method (exploration)', 'block-minimap' ) }
+						value={ method }
+						options={ METHOD_OPTIONS }
+						onChange={ ( value ) =>
+							this.setCompact( { method: value } )
+						}
+						__nextHasNoMarginBottom
+					/>
 				</div>
+				<div
+					className="minimap-frame"
+					style={ frameHeight ? { height: frameHeight } : undefined }
+				>
+					<div
+						id="minimap-container"
+						className={ classes }
+						ref={ this.containerRef }
+						style={ { '--minimap-scale': scale } }
+					>
+						<div
+							className="minimap-block title"
+							{ ...{ [ ENTRY_ATTRIBUTE ]: 'title' } }
+						>
+							{ title }
+						</div>
 
-				{ blocks && renderBlocks( blocks, 0 ) }
+						{ blocks && renderBlocks( blocks, 0 ) }
+					</div>
+				</div>
 			</div>
 		);
 	}

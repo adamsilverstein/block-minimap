@@ -265,3 +265,144 @@ pre.minimap-pre {
 	flex: 1;
 	min-width: 0;
 }
+
+/*
+ * Compact minimap exploration (#60). The sidebar's own font size is the
+ * baseline every em below is measured against.
+ */
+.minimap-root {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 100%;
+}
+
+.minimap-controls {
+	display: flex;
+	gap: 8px;
+}
+
+.minimap-controls > * {
+	flex: 1;
+	min-width: 0;
+}
+
+/* transform: scale() — layout keeps its full size, the frame clips it. */
+.minimap-frame {
+	overflow: hidden;
+}
+
+#minimap-container.is-method-transform {
+	width: 240px;
+	margin: 0 auto;
+	transform: scale( var( --minimap-scale ) );
+	transform-origin: top center;
+}
+
+/* zoom — scales layout too, so scroll height follows. */
+#minimap-container.is-method-zoom {
+	zoom: var( --minimap-scale );
+}
+
+#minimap-container.is-method-zoom > .minimap-block {
+	margin-left: auto;
+	margin-right: auto;
+}
+
+/*
+ * Custom properties — type, gaps and media shrink, the column keeps its
+ * full width. Text never drops below about 7px so it stays readable.
+ */
+#minimap-container.is-method-vars,
+#minimap-container.is-method-lines {
+	font-size: max( 10px, calc( 13px * var( --minimap-scale ) ) );
+}
+
+#minimap-container.is-method-vars .minimap-block,
+#minimap-container.is-method-lines .minimap-block {
+	margin-bottom: calc( 10px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-method-vars .minimap-block .minimap-block,
+#minimap-container.is-method-lines .minimap-block .minimap-block {
+	margin-bottom: calc( 4px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-method-vars img.minimap-media,
+#minimap-container.is-method-lines img.minimap-media {
+	max-height: calc( 64px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-method-vars img.minimap-media.minimap-gallery__thumb,
+#minimap-container.is-method-lines img.minimap-media.minimap-gallery__thumb {
+	max-height: calc( 28px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-method-vars .minimap-media-placeholder.aspect-wide,
+#minimap-container.is-method-lines .minimap-media-placeholder.aspect-wide {
+	width: calc( 120px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-method-vars h1, #minimap-container.is-method-vars h2,
+#minimap-container.is-method-vars h3, #minimap-container.is-method-vars h4,
+#minimap-container.is-method-lines h1, #minimap-container.is-method-lines h2,
+#minimap-container.is-method-lines h3, #minimap-container.is-method-lines h4 {
+	margin-top: calc( 6px * var( --minimap-scale ) );
+}
+
+/*
+ * Lines — below full size, body text draws as gray bars the length of each
+ * line, the way code editor minimaps do. Headings stay real text so the
+ * outline remains scannable, and bars are cheap enough to show more lines
+ * of each paragraph, so its length reads at a glance.
+ */
+#minimap-container.is-text-lines {
+	font-size: calc( 13px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-text-lines .minimap-ink {
+	color: transparent;
+	background-color: #c3c4c7;
+	border-radius: 1px;
+	-webkit-box-decoration-break: clone;
+	box-decoration-break: clone;
+}
+
+#minimap-container.is-text-lines .minimap-ink * {
+	color: transparent;
+}
+
+/*
+ * Bars only save room if the line pitch shrinks with the scale, so text is
+ * set smaller than its pitch: thin bars with a gap between them, and more
+ * words to a line.
+ */
+#minimap-container.is-text-lines .minimap-text,
+#minimap-container.is-text-lines pre.minimap-pre,
+#minimap-container.is-text-lines .core-list li,
+#minimap-container.is-text-lines .core-table td,
+#minimap-container.is-text-lines .core-table th {
+	font-size: calc( 6px * var( --minimap-scale ) );
+	line-height: calc( 11px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-text-lines .minimap-text {
+	-webkit-line-clamp: 4;
+}
+
+#minimap-container.is-text-lines h1,
+#minimap-container.is-text-lines h2,
+#minimap-container.is-text-lines h3,
+#minimap-container.is-text-lines h4,
+#minimap-container.is-text-lines h5,
+#minimap-container.is-text-lines h6,
+#minimap-container.is-text-lines .minimap-block.title {
+	font-size: 9px;
+	line-height: 1.2;
+	font-weight: 600;
+	color: #1e1e1e;
+}
+
+#minimap-container.is-text-lines .minimap-block.title {
+	font-size: 12px;
+}
