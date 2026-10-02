@@ -10,9 +10,9 @@
 
 ## Screencast
 
-Scrolling a long post, then scrolling the minimap to see the whole document at once.
+The minimap and the editor scroll together: scrolling the post moves the minimap along with it, and scrolling the minimap moves the post.
 
-![Screencast of a long post scrolling in the block editor with the Block Minimap open in the sidebar](.github/media/screencast.gif)
+![Screencast of a long post scrolling down in the block editor with the Block Minimap following along in the sidebar, then the minimap scrolling back up and the post following it](.github/media/screencast.gif)
 
 ## Requirements
 
