@@ -265,3 +265,97 @@ pre.minimap-pre {
 	flex: 1;
 	min-width: 0;
 }
+
+/* The size control sits above the minimap. */
+.minimap-root {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 100%;
+}
+
+/*
+ * Compact sizes (#60). `--minimap-scale` shrinks gaps and media while the
+ * column keeps its full width: compact vertically, not horizontally.
+ */
+#minimap-container.is-compact {
+	font-size: calc( 13px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-compact .minimap-block {
+	margin-bottom: calc( 10px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-compact .minimap-block .minimap-block {
+	margin-bottom: calc( 4px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-compact img.minimap-media {
+	max-height: calc( 64px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-compact img.minimap-media.minimap-gallery__thumb {
+	max-height: calc( 28px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-compact .minimap-media-placeholder.aspect-wide {
+	width: calc( 120px * var( --minimap-scale ) );
+}
+
+/*
+ * Body text draws as gray bars the length of each line, the way code
+ * editor minimaps do. Each text renderer wraps its content in an inline
+ * `.minimap-ink` span, and an inline background follows the text line by
+ * line and stops where the last line does, so the bars keep the shape of
+ * each paragraph.
+ */
+#minimap-container.is-compact .minimap-ink {
+	color: transparent;
+	background-color: #c3c4c7;
+	border-radius: 1px;
+	-webkit-box-decoration-break: clone;
+	box-decoration-break: clone;
+}
+
+#minimap-container.is-compact .minimap-ink * {
+	color: transparent;
+}
+
+/*
+ * Bars only save room if the line pitch shrinks with the scale, so text is
+ * set smaller than its pitch: thin bars with a gap between them, and more
+ * words to a line.
+ */
+#minimap-container.is-compact .minimap-text,
+#minimap-container.is-compact pre.minimap-pre,
+#minimap-container.is-compact .core-list li,
+#minimap-container.is-compact .core-table td,
+#minimap-container.is-compact .core-table th {
+	font-size: calc( 6px * var( --minimap-scale ) );
+	line-height: calc( 11px * var( --minimap-scale ) );
+}
+
+#minimap-container.is-compact .minimap-text {
+	-webkit-line-clamp: 4;
+}
+
+/* Headings and the title stay real text, so the outline is scannable. */
+#minimap-container.is-compact h1,
+#minimap-container.is-compact h2,
+#minimap-container.is-compact h3,
+#minimap-container.is-compact h4,
+#minimap-container.is-compact h5,
+#minimap-container.is-compact h6 {
+	margin-top: calc( 6px * var( --minimap-scale ) );
+	font-size: 9px;
+	line-height: 1.2;
+	font-weight: 600;
+	color: #1e1e1e;
+}
+
+#minimap-container.is-compact .minimap-block.title {
+	font-size: 12px;
+	line-height: 1.2;
+	font-weight: 600;
+	color: #1e1e1e;
+}

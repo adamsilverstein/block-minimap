@@ -1,9 +1,20 @@
 const { PureComponent, cloneElement, createRef, memo } = wp.element;
 const { subscribe, select } = wp.data;
+const { SelectControl } = wp.components;
+const { __ } = wp.i18n;
 const { debounce, map } = lodash;
 import './block-minimap.css';
 import { resolveRenderer } from './renderers';
 import ScrollSync, { ENTRY_ATTRIBUTE } from './scroll-sync';
+import { SIZES, SIZE_OPTIONS, autoSize, getSavedSize, saveSize } from './size';
+
+/**
+ * How many blocks the post holds, including nested ones.
+ *
+ * @return {number} The block count.
+ */
+const countBlocks = () =>
+	select( 'core/block-editor' ).getClientIdsWithDescendants().length;
 
 /**
  * One block's minimap entry.
@@ -45,7 +56,7 @@ function renderBlocks( blocks, depth ) {
 /*
  * A PureComponent with no props: re-renders of the surrounding sidebar
  * chrome (selection changes, panel toggles) pass the minimap by, and only
- * its own state — the block tree and the post title — redraws it.
+ * its own state — the block tree, the post title and the size — redraws it.
  */
 export default class Minimap extends PureComponent {
 	constructor( props ) {
@@ -54,8 +65,11 @@ export default class Minimap extends PureComponent {
 		this.state = {
 			blocks: select( 'core/block-editor' ).getBlocks(),
 			title: select( 'core/editor' ).getEditedPostAttribute( 'title' ),
+			size: getSavedSize(),
+			autoSize: autoSize( countBlocks() ),
 		};
 		this.containerRef = createRef();
+		this.setSize = this.setSize.bind( this );
 		this.checkForUpdates = debounce(
 			this.checkForUpdates.bind( this ),
 			250
@@ -96,6 +110,8 @@ export default class Minimap extends PureComponent {
 		const title = select( 'core/editor' ).getEditedPostAttribute(
 			'title'
 		);
+		// The saved size can change from outside, such as another tab.
+		const size = getSavedSize();
 
 		/*
 		 * The subscription fires on every store change — selection moves,
@@ -105,31 +121,60 @@ export default class Minimap extends PureComponent {
 		 */
 		if (
 			blocks === this.state.blocks &&
-			title === this.state.title
+			title === this.state.title &&
+			size === this.state.size
 		) {
 			return;
 		}
 
-		this.setState( { blocks, title } );
+		this.setState( {
+			blocks,
+			title,
+			size,
+			autoSize:
+				blocks === this.state.blocks
+					? this.state.autoSize
+					: autoSize( countBlocks(), this.state.autoSize ),
+		} );
+	}
+
+	setSize( size ) {
+		this.setState( { size } );
+		saveSize( size );
 	}
 
 	render() {
-		const { blocks, title } = this.state;
+		const { blocks, title, size } = this.state;
+		const resolved = size === 'auto' ? this.state.autoSize : size;
+		const scale = SIZES[ resolved ];
 
 		return (
-			<div
-				id="minimap-container"
-				ref={ this.containerRef }
-				style={ { height: '100%' } }
-			>
+			<div className="minimap-root">
+				<SelectControl
+					label={ __( 'Minimap size', 'block-minimap' ) }
+					value={ size }
+					options={ SIZE_OPTIONS }
+					onChange={ this.setSize }
+					__next40pxDefaultSize
+					__nextHasNoMarginBottom
+				/>
 				<div
-					className="minimap-block title"
-					{ ...{ [ ENTRY_ATTRIBUTE ]: 'title' } }
+					id="minimap-container"
+					className={ `is-size-${ resolved }${
+						scale < 1 ? ' is-compact' : ''
+					}` }
+					ref={ this.containerRef }
+					style={ { height: '100%', '--minimap-scale': scale } }
 				>
-					{ title }
-				</div>
+					<div
+						className="minimap-block title"
+						{ ...{ [ ENTRY_ATTRIBUTE ]: 'title' } }
+					>
+						{ title }
+					</div>
 
-				{ blocks && renderBlocks( blocks, 0 ) }
+					{ blocks && renderBlocks( blocks, 0 ) }
+				</div>
 			</div>
 		);
 	}
