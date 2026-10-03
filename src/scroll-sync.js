@@ -142,6 +142,77 @@ function getMinimapAnchors( container, scroller ) {
 }
 
 /**
+ * Pairs up the anchors two views share, as breakpoints for mapping an offset
+ * in one view's content to the matching offset in the other's.
+ *
+ * Anchors that would step backward in either view are skipped, so the
+ * breakpoints always run forward in both and the mapping never folds back.
+ *
+ * @param {Map<string, number>} sourceAnchors Anchor offsets in the source.
+ * @param {Map<string, number>} targetAnchors Anchor offsets in the target.
+ * @param {number[]}            start         The [ source, target ] offsets
+ *                                            the content starts at.
+ * @param {number[]}            end           The [ source, target ] offsets
+ *                                            the content ends at.
+ * @return {number[][]} [ source, target ] breakpoints in document order.
+ */
+function getBreakpoints( sourceAnchors, targetAnchors, start, end ) {
+	const points = [ start ];
+
+	sourceAnchors.forEach( ( sourceOffset, id ) => {
+		const targetOffset = targetAnchors.get( id );
+		const [ lastSource, lastTarget ] = points[ points.length - 1 ];
+
+		if (
+			targetOffset !== undefined &&
+			sourceOffset > lastSource &&
+			targetOffset >= lastTarget
+		) {
+			points.push( [ sourceOffset, targetOffset ] );
+		}
+	} );
+
+	const [ lastSource, lastTarget ] = points[ points.length - 1 ];
+
+	points.push( [
+		Math.max( end[ 0 ], lastSource + 1 ),
+		Math.max( end[ 1 ], lastTarget ),
+	] );
+
+	return points;
+}
+
+/**
+ * Maps an offset through a set of breakpoints, interpolating between the
+ * two around it.
+ *
+ * @param {number[][]} points  Breakpoints from getBreakpoints().
+ * @param {number}     offset Offset in the source view.
+ * @param {boolean}    reverse Map from the target view to the source view
+ *                             instead.
+ * @return {number} The matching offset in the other view.
+ */
+function mapOffset( points, offset, reverse = false ) {
+	const from = reverse ? 1 : 0;
+	const to = reverse ? 0 : 1;
+	let index = 1;
+
+	while ( index < points.length - 1 && points[ index ][ from ] <= offset ) {
+		index++;
+	}
+
+	const before = points[ index - 1 ];
+	const after = points[ index ];
+	const span = after[ from ] - before[ from ];
+	const fraction =
+		span > 0
+			? Math.min( 1, Math.max( 0, ( offset - before[ from ] ) / span ) )
+			: 0;
+
+	return before[ to ] + fraction * ( after[ to ] - before[ to ] );
+}
+
+/**
  * Maps a scroll position in one view to the matching position in another.
  *
  * Minimap entries are far shorter than the blocks they stand for, and not in
@@ -175,41 +246,13 @@ export function mapScrollPosition(
 	const progress =
 		sourceMax > 0 ? Math.min( 1, source.scrollTop / sourceMax ) : 0;
 	const reference = source.scrollTop + source.clientHeight * progress;
-
-	// Breakpoints in document order, each step forward in both views.
-	const points = [ [ 0, 0 ] ];
-
-	sourceAnchors.forEach( ( sourceOffset, id ) => {
-		const targetOffset = targetAnchors.get( id );
-		const [ lastSource, lastTarget ] = points[ points.length - 1 ];
-
-		if (
-			targetOffset !== undefined &&
-			sourceOffset > lastSource &&
-			targetOffset >= lastTarget
-		) {
-			points.push( [ sourceOffset, targetOffset ] );
-		}
-	} );
-
-	points.push( [
-		Math.max( source.scrollHeight, points[ points.length - 1 ][ 0 ] + 1 ),
-		Math.max( target.scrollHeight, points[ points.length - 1 ][ 1 ] ),
-	] );
-
-	let index = 1;
-
-	while ( index < points.length - 1 && points[ index ][ 0 ] <= reference ) {
-		index++;
-	}
-
-	const [ fromSource, fromTarget ] = points[ index - 1 ];
-	const [ toSource, toTarget ] = points[ index ];
-	const fraction = Math.min(
-		1,
-		Math.max( 0, ( reference - fromSource ) / ( toSource - fromSource ) )
+	const targetReference = mapOffset(
+		getBreakpoints( sourceAnchors, targetAnchors, [ 0, 0 ], [
+			source.scrollHeight,
+			target.scrollHeight,
+		] ),
+		reference
 	);
-	const targetReference = fromTarget + fraction * ( toTarget - fromTarget );
 
 	/*
 	 * Solve for the scroll position that puts targetReference under the
@@ -224,35 +267,50 @@ export function mapScrollPosition(
 
 /**
  * Keeps the minimap and the editor canvas scrolled to the same content, in
- * both directions.
+ * both directions, and moves the spotlight over the part of the minimap
+ * that is visible in the canvas.
  */
 export default class ScrollSync {
 	/**
-	 * @param {Element} container The minimap container.
+	 * @param {Element} container    The minimap container.
+	 * @param {Object}  spotlightRef Ref to the spotlight element, which is
+	 *                               only rendered while the spotlight is on.
 	 */
-	constructor( container ) {
+	constructor( container, spotlightRef ) {
 		this.container = container;
+		this.spotlightRef = spotlightRef;
 		this.canvas = null;
 		this.minimapScroller = null;
 		this.frame = null;
 		this.pendingSource = null;
+		this.drag = null;
+		this.dragFrame = null;
 		// The scroll position each side was last moved to by the sync itself.
 		this.expected = new Map();
 
 		this.onCanvasScroll = () => this.schedule( 'canvas' );
 		this.onMinimapScroll = () => this.schedule( 'minimap' );
 		this.attach = this.attach.bind( this );
+		this.syncFromCanvas = this.syncFromCanvas.bind( this );
+		this.startDrag = this.startDrag.bind( this );
+		this.moveDrag = this.moveDrag.bind( this );
+		this.endDrag = this.endDrag.bind( this );
 	}
 
 	start() {
 		this.attach();
 		this.interval = window.setInterval( this.attach, REATTACH_INTERVAL );
+		// A resize changes how much of the canvas is visible.
+		window.addEventListener( 'resize', this.syncFromCanvas );
 		this.syncFromCanvas();
 	}
 
 	stop() {
 		window.clearInterval( this.interval );
+		window.removeEventListener( 'resize', this.syncFromCanvas );
 		window.cancelAnimationFrame( this.frame );
+		window.cancelAnimationFrame( this.dragFrame );
+		this.drag = null;
 		this.detachCanvas();
 		this.detachMinimap();
 	}
@@ -336,6 +394,11 @@ export default class ScrollSync {
 	 * @param {boolean} force  Sync even if the scroll was the sync's own.
 	 */
 	schedule( source, force = false ) {
+		// While the spotlight is dragged, the drag moves the canvas itself.
+		if ( this.drag && source === 'canvas' ) {
+			return;
+		}
+
 		if ( ! force && this.isEcho( source ) ) {
 			return;
 		}
@@ -381,6 +444,7 @@ export default class ScrollSync {
 
 	sync( source ) {
 		if ( ! this.canvas || ! this.minimapScroller ) {
+			this.hideSpotlight();
 			return;
 		}
 
@@ -407,14 +471,190 @@ export default class ScrollSync {
 			  );
 
 		if (
-			position === null ||
-			Math.abs( targetScroller.scrollTop - position ) < 1
+			position !== null &&
+			Math.abs( targetScroller.scrollTop - position ) >= 1
+		) {
+			targetScroller.scrollTo( { top: position, behavior: 'instant' } );
+			// Read back what the browser settled on, which may be rounded.
+			this.expected.set( target, targetScroller.scrollTop );
+		}
+
+		this.updateSpotlight( canvasAnchors, minimapAnchors );
+	}
+
+	/**
+	 * Breakpoints from canvas content offsets to offsets within the minimap
+	 * container, for placing the spotlight.
+	 *
+	 * The canvas starts and ends where the minimap container does, and the
+	 * shared anchors line them up in between.
+	 *
+	 * @param {Map<string, number>} canvasAnchors  Canvas anchor offsets.
+	 * @param {Map<string, number>} minimapAnchors Minimap anchor offsets.
+	 * @return {number[][]} [ canvas, container ] breakpoints.
+	 */
+	getSpotlightBreakpoints( canvasAnchors, minimapAnchors ) {
+		const containerTop = contentOffset(
+			this.container,
+			this.minimapScroller
+		);
+		const inContainer = new Map();
+
+		minimapAnchors.forEach( ( offset, id ) =>
+			inContainer.set( id, offset - containerTop )
+		);
+
+		return getBreakpoints( canvasAnchors, inContainer, [ 0, 0 ], [
+			this.canvas.scroller.scrollHeight,
+			this.container.offsetHeight,
+		] );
+	}
+
+	/**
+	 * Frames the part of the minimap that matches what the canvas shows.
+	 *
+	 * The canvas viewport's top and bottom edges map into the minimap
+	 * separately, so the frame grows over dense text and shrinks over tall
+	 * media rather than assuming the two are in proportion.
+	 *
+	 * @param {Map<string, number>} canvasAnchors  Canvas anchor offsets.
+	 * @param {Map<string, number>} minimapAnchors Minimap anchor offsets.
+	 */
+	updateSpotlight( canvasAnchors, minimapAnchors ) {
+		const spotlight = this.spotlightRef.current;
+
+		if ( ! spotlight ) {
+			return;
+		}
+
+		const { scrollTop, clientHeight, scrollHeight } = this.canvas.scroller;
+
+		// With the whole post in view there is nothing to single out.
+		if ( scrollHeight - clientHeight < 1 ) {
+			this.hideSpotlight();
+			return;
+		}
+
+		const points = this.getSpotlightBreakpoints(
+			canvasAnchors,
+			minimapAnchors
+		);
+		const top = mapOffset( points, scrollTop );
+		const bottom = mapOffset( points, scrollTop + clientHeight );
+
+		spotlight.hidden = false;
+		spotlight.style.transform = `translateY(${ top }px)`;
+		spotlight.style.height = `${ bottom - top }px`;
+	}
+
+	hideSpotlight() {
+		const spotlight = this.spotlightRef.current;
+
+		if ( spotlight ) {
+			spotlight.hidden = true;
+		}
+	}
+
+	/**
+	 * Starts dragging the spotlight, which scrolls the canvas.
+	 *
+	 * @param {PointerEvent} event The pointerdown event on the spotlight.
+	 */
+	startDrag( event ) {
+		const spotlight = event.currentTarget;
+
+		if (
+			event.button !== 0 ||
+			! this.canvas ||
+			! this.minimapScroller
 		) {
 			return;
 		}
 
-		targetScroller.scrollTo( { top: position, behavior: 'instant' } );
-		// Read back what the browser settled on, which may be rounded.
-		this.expected.set( target, targetScroller.scrollTop );
+		event.preventDefault();
+		// Keeps the drag tracking once the pointer leaves the sidebar.
+		spotlight.setPointerCapture( event.pointerId );
+
+		const canvasAnchors = getCanvasAnchors( this.canvas );
+		const minimapAnchors = getMinimapAnchors(
+			this.container,
+			this.minimapScroller
+		);
+
+		this.drag = {
+			pointerId: event.pointerId,
+			// Where on the frame it was grabbed, so it stays under the pointer.
+			grab: event.clientY - spotlight.getBoundingClientRect().top,
+			clientY: event.clientY,
+			canvasAnchors,
+			minimapAnchors,
+			points: this.getSpotlightBreakpoints(
+				canvasAnchors,
+				minimapAnchors
+			),
+		};
+		spotlight.classList.add( 'is-dragging' );
+	}
+
+	/**
+	 * Follows the pointer, at most once a frame.
+	 *
+	 * @param {PointerEvent} event The pointermove event.
+	 */
+	moveDrag( event ) {
+		if ( ! this.drag || event.pointerId !== this.drag.pointerId ) {
+			return;
+		}
+
+		this.drag.clientY = event.clientY;
+
+		if ( this.dragFrame === null ) {
+			this.dragFrame = window.requestAnimationFrame( () => {
+				this.dragFrame = null;
+				this.dragTo();
+			} );
+		}
+	}
+
+	/**
+	 * Scrolls the canvas so the spotlight's top edge lands where the pointer
+	 * put it, mapping back from the minimap to the canvas through the same
+	 * breakpoints the spotlight was placed with.
+	 */
+	dragTo() {
+		if ( ! this.drag || ! this.canvas ) {
+			return;
+		}
+
+		const { clientY, grab, points, canvasAnchors, minimapAnchors } =
+			this.drag;
+		const scroller = this.canvas.scroller;
+		const top =
+			clientY - grab - this.container.getBoundingClientRect().top;
+
+		scroller.scrollTo( {
+			top: mapOffset( points, top, true ),
+			behavior: 'instant',
+		} );
+		this.updateSpotlight( canvasAnchors, minimapAnchors );
+	}
+
+	/**
+	 * Ends a drag and brings the minimap back in line with the canvas.
+	 *
+	 * @param {PointerEvent} event The pointerup, pointercancel or
+	 *                             lostpointercapture event.
+	 */
+	endDrag( event ) {
+		if ( ! this.drag || event.pointerId !== this.drag.pointerId ) {
+			return;
+		}
+
+		window.cancelAnimationFrame( this.dragFrame );
+		this.dragFrame = null;
+		this.dragTo();
+		this.drag = null;
+		event.currentTarget.classList.remove( 'is-dragging' );
+		this.syncFromCanvas();
 	}
 }

@@ -1,12 +1,13 @@
 const { PureComponent, cloneElement, createRef, memo } = wp.element;
 const { subscribe, select } = wp.data;
-const { SelectControl } = wp.components;
+const { SelectControl, ToggleControl } = wp.components;
 const { __ } = wp.i18n;
 const { debounce, map } = lodash;
 import './block-minimap.css';
 import { resolveRenderer } from './renderers';
 import ScrollSync, { ENTRY_ATTRIBUTE } from './scroll-sync';
 import { SIZES, SIZE_OPTIONS, autoSize, getSavedSize, saveSize } from './size';
+import { getSavedSpotlight, saveSpotlight } from './spotlight';
 
 /**
  * How many blocks the post holds, including nested ones.
@@ -56,7 +57,8 @@ function renderBlocks( blocks, depth ) {
 /*
  * A PureComponent with no props: re-renders of the surrounding sidebar
  * chrome (selection changes, panel toggles) pass the minimap by, and only
- * its own state — the block tree, the post title and the size — redraws it.
+ * its own state - the block tree, the post title, the size and the
+ * spotlight setting - redraws it.
  */
 export default class Minimap extends PureComponent {
 	constructor( props ) {
@@ -67,9 +69,21 @@ export default class Minimap extends PureComponent {
 			title: select( 'core/editor' ).getEditedPostAttribute( 'title' ),
 			size: getSavedSize(),
 			autoSize: autoSize( countBlocks() ),
+			spotlight: getSavedSpotlight(),
 		};
 		this.containerRef = createRef();
+		this.spotlightRef = createRef();
 		this.setSize = this.setSize.bind( this );
+		this.setSpotlight = this.setSpotlight.bind( this );
+		// The scroll sync only exists once mounted, so look it up per event.
+		this.dragHandlers = {
+			onPointerDown: ( event ) => this.scrollSync.startDrag( event ),
+			onPointerMove: ( event ) => this.scrollSync.moveDrag( event ),
+			onPointerUp: ( event ) => this.scrollSync.endDrag( event ),
+			onPointerCancel: ( event ) => this.scrollSync.endDrag( event ),
+			onLostPointerCapture: ( event ) =>
+				this.scrollSync.endDrag( event ),
+		};
 		this.checkForUpdates = debounce(
 			this.checkForUpdates.bind( this ),
 			250
@@ -78,7 +92,10 @@ export default class Minimap extends PureComponent {
 
 	componentDidMount() {
 		this.unsubscribe = subscribe( this.checkForUpdates );
-		this.scrollSync = new ScrollSync( this.containerRef.current );
+		this.scrollSync = new ScrollSync(
+			this.containerRef.current,
+			this.spotlightRef
+		);
 		this.scrollSync.start();
 		this.countRender();
 	}
@@ -116,6 +133,7 @@ export default class Minimap extends PureComponent {
 		 * size chosen this session.
 		 */
 		const size = getSavedSize( this.state.size );
+		const spotlight = getSavedSpotlight( this.state.spotlight );
 
 		/*
 		 * The subscription fires on every store change — selection moves,
@@ -126,7 +144,8 @@ export default class Minimap extends PureComponent {
 		if (
 			blocks === this.state.blocks &&
 			title === this.state.title &&
-			size === this.state.size
+			size === this.state.size &&
+			spotlight === this.state.spotlight
 		) {
 			return;
 		}
@@ -135,6 +154,7 @@ export default class Minimap extends PureComponent {
 			blocks,
 			title,
 			size,
+			spotlight,
 			autoSize:
 				blocks === this.state.blocks
 					? this.state.autoSize
@@ -147,8 +167,13 @@ export default class Minimap extends PureComponent {
 		saveSize( size );
 	}
 
+	setSpotlight( spotlight ) {
+		this.setState( { spotlight } );
+		saveSpotlight( spotlight );
+	}
+
 	render() {
-		const { blocks, title, size } = this.state;
+		const { blocks, title, size, spotlight } = this.state;
 		const resolved = size === 'auto' ? this.state.autoSize : size;
 		const scale = SIZES[ resolved ];
 
@@ -162,22 +187,47 @@ export default class Minimap extends PureComponent {
 					__next40pxDefaultSize
 					__nextHasNoMarginBottom
 				/>
+				<ToggleControl
+					label={ __( 'Highlight visible area', 'block-minimap' ) }
+					checked={ spotlight }
+					onChange={ this.setSpotlight }
+					__nextHasNoMarginBottom
+				/>
 				<div
-					id="minimap-container"
-					className={ `is-size-${ resolved }${
-						scale < 1 ? ' is-compact' : ''
+					className={ `minimap-stage${
+						spotlight ? ' has-spotlight' : ''
 					}` }
-					ref={ this.containerRef }
-					style={ { height: '100%', '--minimap-scale': scale } }
 				>
 					<div
-						className="minimap-block title"
-						{ ...{ [ ENTRY_ATTRIBUTE ]: 'title' } }
+						id="minimap-container"
+						className={ `is-size-${ resolved }${
+							scale < 1 ? ' is-compact' : ''
+						}` }
+						ref={ this.containerRef }
+						style={ { height: '100%', '--minimap-scale': scale } }
 					>
-						{ title }
-					</div>
+						<div
+							className="minimap-block title"
+							{ ...{ [ ENTRY_ATTRIBUTE ]: 'title' } }
+						>
+							{ title }
+						</div>
 
-					{ blocks && renderBlocks( blocks, 0 ) }
+						{ blocks && renderBlocks( blocks, 0 ) }
+					</div>
+					{ spotlight && (
+						/*
+						 * Only pointer users get the drag handle: keyboard
+						 * and screen reader users scroll the canvas itself.
+						 */
+						<div
+							className="minimap-spotlight"
+							ref={ this.spotlightRef }
+							aria-hidden="true"
+							hidden
+							{ ...this.dragHandlers }
+						/>
+					) }
 				</div>
 			</div>
 		);
