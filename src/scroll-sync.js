@@ -120,6 +120,27 @@ function getCanvasAnchors( canvas ) {
 }
 
 /**
+ * Where the post's content ends in the canvas: the bottom of its last top
+ * level block, short of the padding the editor leaves below it.
+ *
+ * @param {Object} canvas The canvas view.
+ * @return {number} Offset from the top of the scrolled content.
+ */
+function getCanvasContentEnd( canvas ) {
+	const order = select( 'core/block-editor' ).getBlockOrder();
+	const last =
+		order.length &&
+		canvas.root.querySelector(
+			`[data-block="${ order[ order.length - 1 ] }"]`
+		);
+
+	return last
+		? contentOffset( last, canvas.scroller ) +
+				last.getBoundingClientRect().height
+		: canvas.scroller.scrollHeight;
+}
+
+/**
  * The content offsets of the minimap's title and top level entries, keyed
  * by the ID of what they stand for.
  *
@@ -486,8 +507,8 @@ export default class ScrollSync {
 	 * Breakpoints from canvas content offsets to offsets within the minimap
 	 * container, for placing the spotlight.
 	 *
-	 * The canvas starts and ends where the minimap container does, and the
-	 * shared anchors line them up in between.
+	 * The canvas content starts and ends where the minimap container does,
+	 * and the shared anchors line them up in between.
 	 *
 	 * @param {Map<string, number>} canvasAnchors  Canvas anchor offsets.
 	 * @param {Map<string, number>} minimapAnchors Minimap anchor offsets.
@@ -505,7 +526,7 @@ export default class ScrollSync {
 		);
 
 		return getBreakpoints( canvasAnchors, inContainer, [ 0, 0 ], [
-			this.canvas.scroller.scrollHeight,
+			getCanvasContentEnd( this.canvas ),
 			this.container.offsetHeight,
 		] );
 	}
@@ -527,20 +548,19 @@ export default class ScrollSync {
 			return;
 		}
 
-		const { scrollTop, clientHeight, scrollHeight } = this.canvas.scroller;
-
-		// With the whole post in view there is nothing to single out.
-		if ( scrollHeight - clientHeight < 1 ) {
-			this.hideSpotlight();
-			return;
-		}
-
+		const { scrollTop, clientHeight } = this.canvas.scroller;
 		const points = this.getSpotlightBreakpoints(
 			canvasAnchors,
 			minimapAnchors
 		);
 		const top = mapOffset( points, scrollTop );
 		const bottom = mapOffset( points, scrollTop + clientHeight );
+
+		// With the whole post in view there is nothing to single out.
+		if ( top < 1 && bottom > this.container.offsetHeight - 1 ) {
+			this.hideSpotlight();
+			return;
+		}
 
 		spotlight.hidden = false;
 		spotlight.style.transform = `translateY(${ top }px)`;
