@@ -60,13 +60,18 @@ const preferencesStore = () =>
 /**
  * Reads the saved size.
  *
+ * @param {string} unsaved What to return where there is no store to read,
+ *                         such as the size already chosen this session.
  * @return {string} A size key or `auto`.
  */
-export function getSavedSize() {
+export function getSavedSize( unsaved = DEFAULT_SIZE ) {
 	const store = preferencesStore();
-	const saved = store
-		? select( store ).get( PREFERENCE_SCOPE, PREFERENCE_NAME )
-		: undefined;
+
+	if ( ! store ) {
+		return unsaved;
+	}
+
+	const saved = select( store ).get( PREFERENCE_SCOPE, PREFERENCE_NAME );
 
 	return saved === 'auto' || SIZES[ saved ] ? saved : DEFAULT_SIZE;
 }

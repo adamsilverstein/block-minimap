@@ -110,8 +110,12 @@ export default class Minimap extends PureComponent {
 		const title = select( 'core/editor' ).getEditedPostAttribute(
 			'title'
 		);
-		// The saved size can change from outside, such as another tab.
-		const size = getSavedSize();
+		/*
+		 * The saved size can change from outside, such as another tab.
+		 * Without a preferences store there is nothing saved, so keep the
+		 * size chosen this session.
+		 */
+		const size = getSavedSize( this.state.size );
 
 		/*
 		 * The subscription fires on every store change — selection moves,
