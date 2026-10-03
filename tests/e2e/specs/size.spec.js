@@ -1,0 +1,192 @@
+/**
+ * External dependencies
+ */
+const { test, expect } = require( '@wordpress/e2e-test-utils-playwright' );
+
+/**
+ * Internal dependencies
+ */
+const { openMinimap, getMinimap } = require( '../utils/minimap' );
+const {
+	fillWithParagraphs,
+	inMinimapScroller,
+	getScrollTop,
+	canvasParagraph,
+	minimapParagraph,
+} = require( '../utils/scroll' );
+
+/**
+ * The size control above the minimap.
+ *
+ * @param {import('@playwright/test').Page} page Playwright page.
+ * @return {import('@playwright/test').Locator} Control locator.
+ */
+const sizeControl = ( page ) =>
+	page.getByRole( 'combobox', { name: 'Minimap size' } );
+
+/**
+ * Saves a size preference straight to the store, as the control would.
+ *
+ * @param {import('@playwright/test').Page} page Playwright page.
+ * @param {string}                          size A size key or `auto`.
+ */
+const saveSize = ( page, size ) =>
+	page.evaluate(
+		( value ) =>
+			window.wp.data
+				.dispatch( 'core/preferences' )
+				.set( 'block-minimap', 'size', value ),
+		size
+	);
+
+test.describe( 'Minimap size', () => {
+	test.beforeEach( async ( { admin, page } ) => {
+		await admin.createNewPost( { title: 'Sizes' } );
+		await saveSize( page, 'auto' );
+	} );
+
+	test.afterEach( async ( { page } ) => {
+		// The preference follows the user, so leave it on the default.
+		await saveSize( page, 'auto' );
+	} );
+
+	test( 'defaults to Automatic', async ( { page } ) => {
+		await openMinimap( page );
+
+		await expect( sizeControl( page ) ).toHaveValue( 'auto' );
+	} );
+
+	test( 'Automatic picks a size from the block count', async ( {
+		page,
+	} ) => {
+		await openMinimap( page );
+
+		for ( const [ count, size ] of [
+			[ 5, 'full' ],
+			[ 60, 'two-thirds' ],
+			[ 120, 'half' ],
+		] ) {
+			await fillWithParagraphs( page, count );
+			await expect( getMinimap( page ) ).toHaveClass(
+				new RegExp( `\\bis-size-${ size }\\b` )
+			);
+		}
+	} );
+
+	test( 'Automatic does not grow back until the count clearly drops', async ( {
+		page,
+	} ) => {
+		await openMinimap( page );
+
+		await fillWithParagraphs( page, 45 );
+		await expect( getMinimap( page ) ).toHaveClass( /\bis-size-two-thirds\b/ );
+
+		// Just under the threshold: no jump back to full size.
+		await fillWithParagraphs( page, 38 );
+		await expect( getMinimap( page ) ).toHaveClass( /\bis-size-two-thirds\b/ );
+
+		await fillWithParagraphs( page, 25 );
+		await expect( getMinimap( page ) ).toHaveClass( /\bis-size-full\b/ );
+	} );
+
+	test( 'a chosen size applies and is saved as a preference', async ( {
+		page,
+	} ) => {
+		await fillWithParagraphs( page, 5 );
+		await openMinimap( page );
+
+		await sizeControl( page ).selectOption( 'half' );
+
+		await expect( getMinimap( page ) ).toHaveClass( /\bis-size-half\b/ );
+		await expect
+			.poll( () =>
+				page.evaluate( () =>
+					window.wp.data
+						.select( 'core/preferences' )
+						.get( 'block-minimap', 'size' )
+				)
+			)
+			.toBe( 'half' );
+	} );
+
+	test( 'compact sizes draw body text as bars and keep headings', async ( {
+		page,
+	} ) => {
+		await page.evaluate( () => {
+			const { createBlock } = window.wp.blocks;
+
+			window.wp.data
+				.dispatch( 'core/block-editor' )
+				.resetBlocks( [
+					createBlock( 'core/heading', { content: 'A heading' } ),
+					createBlock( 'core/paragraph', { content: 'Some text' } ),
+				] );
+		} );
+		await openMinimap( page );
+
+		const colors = () =>
+			getMinimap( page ).evaluate( ( container ) => ( {
+				ink: getComputedStyle(
+					container.querySelector( '.core-paragraph .minimap-ink' )
+				).color,
+				heading: getComputedStyle( container.querySelector( 'h2' ) )
+					.color,
+			} ) );
+
+		await sizeControl( page ).selectOption( 'full' );
+		expect( ( await colors() ).ink ).not.toBe( 'rgba(0, 0, 0, 0)' );
+
+		await sizeControl( page ).selectOption( 'half' );
+		await expect
+			.poll( async () => ( await colors() ).ink )
+			.toBe( 'rgba(0, 0, 0, 0)' );
+		expect( ( await colors() ).heading ).not.toBe( 'rgba(0, 0, 0, 0)' );
+	} );
+
+	test( 'smaller sizes make the minimap shorter', async ( { page } ) => {
+		await fillWithParagraphs( page, 60 );
+		await openMinimap( page );
+
+		const heights = {};
+
+		for ( const size of [ 'full', 'two-thirds', 'half' ] ) {
+			await sizeControl( page ).selectOption( size );
+			await expect( getMinimap( page ) ).toHaveClass(
+				new RegExp( `\\bis-size-${ size }\\b` )
+			);
+			heights[ size ] = await getMinimap( page ).evaluate(
+				( container ) => container.scrollHeight
+			);
+		}
+
+		expect( heights[ 'two-thirds' ] ).toBeLessThan( heights.full );
+		expect( heights.half ).toBeLessThan( heights[ 'two-thirds' ] );
+	} );
+
+	for ( const size of [ 'full', 'two-thirds', 'half' ] ) {
+		test( `scroll sync lines up at ${ size } size`, async ( { page } ) => {
+			await fillWithParagraphs( page, 60 );
+			await openMinimap( page );
+			await sizeControl( page ).selectOption( size );
+			await expect( getMinimap( page ) ).toHaveClass(
+				new RegExp( `\\bis-size-${ size }\\b` )
+			);
+
+			await page.frame( { name: 'editor-canvas' } ).evaluate( () => {
+				document
+					.querySelectorAll( '.is-root-container > [data-block]' )[ 30 ]
+					.scrollIntoView( { block: 'start' } );
+			} );
+
+			await expect
+				.poll( () => inMinimapScroller( page, getScrollTop ) )
+				.toBeGreaterThan( 0 );
+
+			const expected = await canvasParagraph( page );
+
+			await expect
+				.poll( () => minimapParagraph( page ) )
+				.toBeCloseTo( expected, 1 );
+		} );
+	}
+} );
