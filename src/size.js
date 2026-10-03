@@ -7,8 +7,13 @@
  * `--minimap-scale` custom property.
  */
 
+import {
+	canSavePreferences,
+	getPreference,
+	savePreference,
+} from './preferences';
+
 const { __ } = wp.i18n;
-const { select, dispatch } = wp.data;
 
 /** The sizes offered, as a fraction of the full size minimap. */
 export const SIZES = {
@@ -44,19 +49,6 @@ const AUTO_SIZES = [
  */
 const AUTO_SLACK = 10;
 
-const PREFERENCE_SCOPE = 'block-minimap';
-const PREFERENCE_NAME = 'size';
-
-/**
- * The preferences store, which saves the choice for the user the way the
- * editor saves its own preferences. It arrived in WordPress 6.0, so older
- * installs fall back to the default every time.
- *
- * @return {?Object} The store, or null where it is missing.
- */
-const preferencesStore = () =>
-	( wp.preferences && wp.preferences.store ) || null;
-
 /**
  * Reads the saved size.
  *
@@ -65,13 +57,11 @@ const preferencesStore = () =>
  * @return {string} A size key or `auto`.
  */
 export function getSavedSize( unsaved = DEFAULT_SIZE ) {
-	const store = preferencesStore();
-
-	if ( ! store ) {
+	if ( ! canSavePreferences() ) {
 		return unsaved;
 	}
 
-	const saved = select( store ).get( PREFERENCE_SCOPE, PREFERENCE_NAME );
+	const saved = getPreference( 'size' );
 
 	return saved === 'auto' || SIZES[ saved ] ? saved : DEFAULT_SIZE;
 }
@@ -81,13 +71,7 @@ export function getSavedSize( unsaved = DEFAULT_SIZE ) {
  *
  * @param {string} size A size key or `auto`.
  */
-export function saveSize( size ) {
-	const store = preferencesStore();
-
-	if ( store ) {
-		dispatch( store ).set( PREFERENCE_SCOPE, PREFERENCE_NAME, size );
-	}
-}
+export const saveSize = ( size ) => savePreference( 'size', size );
 
 /**
  * Picks the automatic size for a block count.
