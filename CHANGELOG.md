@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file, per [the Keep a Changelog standard](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+- A size control for the minimap: Automatic, 100%, 2/3 and 1/2. Below 100%, body text draws as gray bars the length of each line while headings stay readable, so a long post fits in fewer sidebar screens. Automatic picks a size from the block count and is the default; the choice is saved as a user preference. ([#60](https://github.com/adamsilverstein/block-minimap/issues/60))
 
 ## [1.1.0]
 ### Added
