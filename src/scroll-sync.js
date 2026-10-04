@@ -920,10 +920,23 @@ export default class ScrollSync {
 			scrollTop + clientHeight * progress
 		);
 
-		return Math.min(
-			this.container.offsetHeight - this.lens.height,
-			Math.max( 0, reference - this.lens.height * progress )
+		return Math.max(
+			0,
+			Math.min(
+				this.spotlightTravel(),
+				reference - this.lens.height * progress
+			)
 		);
+	}
+
+	/**
+	 * How far a spotlight of the lens height can move down the minimap:
+	 * nothing when the minimap is shorter than the spotlight.
+	 *
+	 * @return {number} Travel in pixels.
+	 */
+	spotlightTravel() {
+		return Math.max( 0, this.container.offsetHeight - this.lens.height );
 	}
 
 	hideSpotlight() {
@@ -1027,7 +1040,12 @@ export default class ScrollSync {
 	 * @return {number} Canvas scroll position.
 	 */
 	scrollTopFor( points, top ) {
-		const { scrollHeight, clientHeight } = this.canvas.scroller;
+		const { scrollTop, scrollHeight, clientHeight } = this.canvas.scroller;
+
+		// A spotlight covering the whole minimap has nowhere to be dragged.
+		if ( this.spotlightTravel() <= 0 ) {
+			return scrollTop;
+		}
 
 		return bisect( 0, Math.max( 0, scrollHeight - clientHeight ), ( s ) =>
 			this.spotlightTop( points, s ) < top

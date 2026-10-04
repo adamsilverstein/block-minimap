@@ -10,6 +10,7 @@ const {
 	openMinimap,
 	getMinimap,
 	saveSpotlight,
+	TEST_IMAGE_URL,
 } = require( '../utils/minimap' );
 const { fillWithParagraphs } = require( '../utils/scroll' );
 
@@ -208,6 +209,53 @@ test.describe( 'Viewport spotlight', () => {
 			expect( [ ...new Set( heights ) ] ).toHaveLength( 1 );
 		} );
 	}
+
+	test( 'stays over a minimap shorter than itself, and drags smoothly', async ( {
+		page,
+	} ) => {
+		// A tall image overflows the canvas but draws as a short thumbnail.
+		await page.evaluate( ( url ) => {
+			const { createBlock } = window.wp.blocks;
+
+			window.wp.data
+				.dispatch( 'core/block-editor' )
+				.resetBlocks( [
+					createBlock( 'core/image', {
+						url,
+						height: '2400px',
+						scale: 'cover',
+					} ),
+					createBlock( 'core/paragraph', { content: 'After.' } ),
+				] );
+		}, TEST_IMAGE_URL );
+		await openMinimap( page );
+		await expect( getSpotlight( page ) ).toBeVisible();
+
+		const stage = await page.locator( '.minimap-stage' ).boundingBox();
+		const box = await getSpotlight( page ).boundingBox();
+
+		expect( box.y ).toBeGreaterThanOrEqual( stage.y - 1 );
+
+		// Nudging the frame does not throw the canvas to either end.
+		const x = box.x + box.width / 2;
+		const y = box.y + 5;
+		const max = await page
+			.frame( { name: 'editor-canvas' } )
+			.evaluate(
+				() =>
+					document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight
+			);
+
+		await page.mouse.move( x, y );
+		await page.mouse.down();
+		await page.mouse.move( x, y + 3, { steps: 3 } );
+		await page.waitForTimeout( 200 );
+		const scrolled = await canvasScrollTop( page );
+		await page.mouse.up();
+
+		expect( scrolled ).toBeLessThan( max * 0.5 );
+	} );
 
 	test( 'draws the entries in view at full size in compact sizes', async ( {
 		page,
