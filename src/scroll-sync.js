@@ -646,23 +646,16 @@ export default class ScrollSync {
 	 */
 	measureLens( inView ) {
 		const entry = this.container.firstElementChild;
-		let column = null;
+		const order = select( 'core/block-editor' ).getBlockOrder();
 
-		// The text column is as wide as any block not set wide or full.
-		inView.forEach( ( id ) => {
-			const block =
-				id !== TITLE_ID &&
-				this.canvas.root.querySelector( `[data-block="${ id }"]` );
-
-			if (
-				block &&
-				! block.classList.contains( 'alignwide' ) &&
-				! block.classList.contains( 'alignfull' ) &&
-				( ! column || block.offsetWidth > column.offsetWidth )
-			) {
-				column = block;
-			}
-		} );
+		/*
+		 * The column is measured from the blocks in view, so the gap below
+		 * it matches what the canvas shows. When those are all set wide or
+		 * full, any other block in the post gives the same column width,
+		 * so the spotlight keeps its size over a full width cover.
+		 */
+		const column =
+			this.findColumn( Array.from( inView ) ) || this.findColumn( order );
 
 		if ( ! entry || ! column || ! column.offsetWidth ) {
 			return null;
@@ -714,6 +707,34 @@ export default class ScrollSync {
 				) }px`,
 			},
 		};
+	}
+
+	/**
+	 * Finds the text column among some blocks: the widest one not set wide
+	 * or full.
+	 *
+	 * @param {string[]} ids Client IDs of the blocks to look through.
+	 * @return {?Element} The block, if any of them is in the column.
+	 */
+	findColumn( ids ) {
+		let column = null;
+
+		ids.forEach( ( id ) => {
+			const block =
+				id !== TITLE_ID &&
+				this.canvas.root.querySelector( `[data-block="${ id }"]` );
+
+			if (
+				block &&
+				! block.classList.contains( 'alignwide' ) &&
+				! block.classList.contains( 'alignfull' ) &&
+				( ! column || block.offsetWidth > column.offsetWidth )
+			) {
+				column = block;
+			}
+		} );
+
+		return column;
 	}
 
 	/**
