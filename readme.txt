@@ -41,7 +41,7 @@ Development takes place in the [GitHub repository](https://github.com/adamsilver
 
 = 1.2.0 =
 * A size control for the minimap: Automatic, 100%, 2/3 and 1/2. Below 100%, body text draws as gray bars while headings stay readable.
-* A spotlight marks the part of the minimap visible in the editor and dims the rest, drawing it at full size when the minimap is compact. Drag it to scroll the post, or turn it off with Highlight visible area.
+* A spotlight marks the part of the minimap visible in the editor and dims the rest, drawing it as a miniature of the editor. Drag it to scroll the post, or turn it off with Highlight visible area.
 
 = 1.1.0 =
 * Minimap representations for all block types, including third party blocks.
