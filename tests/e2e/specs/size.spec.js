@@ -6,7 +6,11 @@ const { test, expect } = require( '@wordpress/e2e-test-utils-playwright' );
 /**
  * Internal dependencies
  */
-const { openMinimap, getMinimap } = require( '../utils/minimap' );
+const {
+	openMinimap,
+	getMinimap,
+	saveSpotlight,
+} = require( '../utils/minimap' );
 const {
 	fillWithParagraphs,
 	inMinimapScroller,
@@ -61,11 +65,14 @@ test.describe( 'Minimap size', () => {
 	test.beforeEach( async ( { admin, page } ) => {
 		await admin.createNewPost( { title: 'Sizes' } );
 		await saveSize( page, 'auto' );
+		// The spotlight draws entries in view at full size; size them alone.
+		await saveSpotlight( page, false );
 	} );
 
 	test.afterEach( async ( { page } ) => {
-		// The preference follows the user, so leave it on the default.
+		// The preferences follow the user, so leave them on the defaults.
 		await saveSize( page, 'auto' );
+		await saveSpotlight( page, true );
 	} );
 
 	test( 'defaults to Automatic', async ( { page } ) => {

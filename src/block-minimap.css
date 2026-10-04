@@ -356,14 +356,39 @@ pre.minimap-pre {
 }
 
 /*
- * Inside the spotlight, entries whose blocks show in the canvas draw at
- * full size, like a magnifier over the compact minimap, so the framed part
- * reads as the post and takes on more of the canvas's shape. The compact
- * rules that do not scale with `--minimap-scale` skip these entries.
+ * Inside the spotlight, entries whose blocks show in the canvas draw as a
+ * miniature of the canvas's text column: real text at the column's size,
+ * line height and block gap scaled to the minimap's width, with nothing
+ * clamped, so the framed part lines up with what the canvas shows. The
+ * scroll sync measures the column and sets the `--minimap-lens-*`
+ * properties. The compact rules that do not scale with `--minimap-scale`
+ * skip these entries.
  */
-#minimap-container.is-compact > [data-minimap-in-view] {
-	--minimap-scale: 1;
-	font-size: 13px;
+#minimap-container > .minimap-block[data-minimap-in-view] {
+	--minimap-scale: var( --minimap-lens, 1 );
+	font-size: var( --minimap-lens-font, 9.1px );
+	line-height: var( --minimap-lens-leading, 1.2 );
+	margin-bottom: var( --minimap-lens-gap, 10px );
+}
+
+#minimap-container > .minimap-block:is( h1, h2, h3, h4, h5, h6 )[data-minimap-in-view] {
+	font-size: calc(
+		var( --minimap-lens-font, 9.1px ) * var( --minimap-lens-heading, 1.6 )
+	);
+	line-height: 1.2;
+}
+
+#minimap-container > .minimap-block.title[data-minimap-in-view] {
+	font-size: calc( var( --minimap-lens-font, 9.1px ) * 2 );
+}
+
+#minimap-container > [data-minimap-in-view] .minimap-text,
+#minimap-container > .minimap-text[data-minimap-in-view],
+#minimap-container > [data-minimap-in-view] pre.minimap-pre,
+#minimap-container > pre.minimap-pre[data-minimap-in-view] {
+	display: block;
+	-webkit-line-clamp: unset;
+	line-height: var( --minimap-lens-leading, 1.2 );
 }
 
 /*
@@ -394,7 +419,10 @@ pre.minimap-pre {
 	box-shadow: 0 0 0 100vmax rgba( 255, 255, 255, 0.5 );
 	cursor: grab;
 	touch-action: none;
-	transition: transform 0.1s ease-out, height 0.1s ease-out;
+	/*
+	 * No transition: the frame moves every animation frame along with the
+	 * scroll sync, and easing it would let it lag behind the minimap.
+	 */
 	will-change: transform;
 }
 
@@ -402,16 +430,8 @@ pre.minimap-pre {
 	display: none;
 }
 
-/* Under a drag the frame follows the pointer exactly. */
 .minimap-spotlight.is-dragging {
 	cursor: grabbing;
-	transition: none;
-}
-
-@media ( prefers-reduced-motion: reduce ) {
-	.minimap-spotlight {
-		transition: none;
-	}
 }
 
 /* Forced colors drop shadows, so draw the frame in the system color. */

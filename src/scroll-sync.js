@@ -12,6 +12,25 @@ export const ENTRY_ATTRIBUTE = 'data-minimap-block';
  */
 export const IN_VIEW_ATTRIBUTE = 'data-minimap-in-view';
 
+/*
+ * The body text size of a full size minimap entry, in pixels: entries are
+ * set at .7em of the sidebar's 13px.
+ */
+const ENTRY_FONT_SIZE = 13 * 0.7;
+
+/*
+ * The range the magnified entries draw in, as a fraction of full size, so
+ * a very wide or very narrow canvas column still leaves them readable.
+ */
+const MIN_LENS = 0.5;
+const MAX_LENS = 1.2;
+
+/*
+ * The most of the sidebar the spotlight may cover, so a tall canvas beside
+ * a short sidebar still leaves the rest of the minimap in sight.
+ */
+const MAX_SPOTLIGHT_SHARE = 0.8;
+
 /** Pairs the post title in the canvas with the title entry in the minimap. */
 const TITLE_ID = 'title';
 
@@ -240,6 +259,28 @@ function mapOffset( points, offset, reverse = false ) {
 }
 
 /**
+ * Finds where a condition that holds up to some point stops holding.
+ *
+ * @param {number}   low    Start of the range.
+ * @param {number}   high   End of the range.
+ * @param {Function} before Whether a value is still before the point.
+ * @return {number} The point, to within a small fraction of a pixel.
+ */
+function bisect( low, high, before ) {
+	for ( let step = 0; step < 24; step++ ) {
+		const middle = ( low + high ) / 2;
+
+		if ( before( middle ) ) {
+			low = middle;
+		} else {
+			high = middle;
+		}
+	}
+
+	return low;
+}
+
+/**
  * Maps a scroll position in one view to the matching position in another.
  *
  * Minimap entries are far shorter than the blocks they stand for, and not in
@@ -312,6 +353,7 @@ export default class ScrollSync {
 		this.pendingSource = null;
 		this.drag = null;
 		this.dragFrame = null;
+		this.lens = null;
 		// The scroll position each side was last moved to by the sync itself.
 		this.expected = new Map();
 
@@ -487,19 +529,42 @@ export default class ScrollSync {
 		const fromCanvas = source === 'canvas';
 		const target = fromCanvas ? 'minimap' : 'canvas';
 		const targetScroller = this.getScroller( target );
-		const position = fromCanvas
-			? mapScrollPosition(
-					this.canvas.scroller,
-					canvasAnchors,
-					targetScroller,
-					minimapAnchors
-			  )
-			: mapScrollPosition(
-					this.minimapScroller,
-					minimapAnchors,
-					targetScroller,
-					canvasAnchors
-			  );
+		const lensPoints =
+			this.lens &&
+			this.getSpotlightBreakpoints( canvasAnchors, minimapAnchors );
+		let position;
+
+		/*
+		 * With the lens on, the minimap scrolls so the spotlight slides
+		 * smoothly down the sidebar: entries growing or shrinking as they
+		 * come into view then move the content around the spotlight, not
+		 * the spotlight itself.
+		 */
+		if ( lensPoints ) {
+			position = fromCanvas
+				? this.lensMinimapScroll(
+						lensPoints,
+						this.canvas.scroller.scrollTop
+				  )
+				: this.lensCanvasScroll(
+						lensPoints,
+						this.minimapScroller.scrollTop
+				  );
+		} else {
+			position = fromCanvas
+				? mapScrollPosition(
+						this.canvas.scroller,
+						canvasAnchors,
+						targetScroller,
+						minimapAnchors
+				  )
+				: mapScrollPosition(
+						this.minimapScroller,
+						minimapAnchors,
+						targetScroller,
+						canvasAnchors
+				  );
+		}
 
 		if (
 			position !== null &&
@@ -549,6 +614,106 @@ export default class ScrollSync {
 				entry.toggleAttribute( IN_VIEW_ATTRIBUTE, show );
 			}
 		} );
+
+		this.lens = enabled ? this.measureLens( inView ) : null;
+
+		if ( this.lens ) {
+			const { style } = this.container;
+
+			Object.entries( this.lens.properties ).forEach(
+				( [ name, value ] ) => {
+					if ( style.getPropertyValue( name ) !== value ) {
+						style.setProperty( name, value );
+					}
+				}
+			);
+		}
+	}
+
+	/**
+	 * Measures the lens: how the entries inside the spotlight draw so they
+	 * are a miniature of the canvas's text column, and how tall that makes
+	 * the spotlight.
+	 *
+	 * The column scaled down to the width of a minimap entry sets the text
+	 * size, line height and gap between blocks, and the canvas viewport
+	 * scaled the same way sets the spotlight's height. All of it depends on
+	 * the canvas layout alone, not on where it is scrolled, so the
+	 * spotlight keeps one size while scrolling.
+	 *
+	 * @param {Set<string>} inView IDs of the blocks in view.
+	 * @return {?Object} The lens, or null without a column to measure.
+	 */
+	measureLens( inView ) {
+		const entry = this.container.firstElementChild;
+		let column = null;
+
+		// The text column is as wide as any block not set wide or full.
+		inView.forEach( ( id ) => {
+			const block =
+				id !== TITLE_ID &&
+				this.canvas.root.querySelector( `[data-block="${ id }"]` );
+
+			if (
+				block &&
+				! block.classList.contains( 'alignwide' ) &&
+				! block.classList.contains( 'alignfull' ) &&
+				( ! column || block.offsetWidth > column.offsetWidth )
+			) {
+				column = block;
+			}
+		} );
+
+		if ( ! entry || ! column || ! column.offsetWidth ) {
+			return null;
+		}
+
+		const view = column.ownerDocument.defaultView;
+		const root = column.parentElement || column;
+		const fontSize = parseFloat( view.getComputedStyle( root ).fontSize );
+		const ratio = entry.offsetWidth / column.offsetWidth;
+		const lens = Math.min(
+			MAX_LENS,
+			Math.max( MIN_LENS, ( fontSize * ratio ) / ENTRY_FONT_SIZE )
+		);
+		const style = view.getComputedStyle( column );
+		const leading =
+			parseFloat( style.lineHeight ) / parseFloat( style.fontSize );
+		const next = column.nextElementSibling;
+		const gap = next
+			? next.getBoundingClientRect().top -
+			  column.getBoundingClientRect().bottom
+			: fontSize;
+		const heading = this.canvas.root.querySelector(
+			'.is-root-container > h2, .is-root-container > h3'
+		);
+		const headingScale = heading
+			? parseFloat( view.getComputedStyle( heading ).fontSize ) /
+			  fontSize
+			: 1.6;
+		const height = Math.min(
+			this.canvas.scroller.clientHeight * ratio,
+			this.minimapScroller.clientHeight * MAX_SPOTLIGHT_SHARE
+		);
+		// Rounded so a subpixel change in the canvas does not redraw.
+		const round = ( value ) => Math.round( value * 100 ) / 100;
+
+		return {
+			height,
+			properties: {
+				'--minimap-lens': String( round( lens ) ),
+				'--minimap-lens-font': `${ round(
+					lens * ENTRY_FONT_SIZE
+				) }px`,
+				'--minimap-lens-leading': Number.isFinite( leading )
+					? String( round( leading ) )
+					: '1.2',
+				'--minimap-lens-heading': String( round( headingScale ) ),
+				'--minimap-lens-gap': `${ round(
+					Math.max( 0, gap ) * ratio
+				) }px`,
+			},
+		};
 	}
 
 	/**
@@ -617,17 +782,127 @@ export default class ScrollSync {
 			return;
 		}
 
-		const { scrollTop, clientHeight } = this.canvas.scroller;
 		const points = this.getSpotlightBreakpoints(
 			canvasAnchors,
 			minimapAnchors
 		);
-		const top = mapOffset( points, scrollTop );
-		const bottom = mapOffset( points, scrollTop + clientHeight );
+		const { scrollTop, clientHeight } = this.canvas.scroller;
+		let top;
+		let height;
+
+		if ( this.lens ) {
+			height = this.lens.height;
+			top = this.spotlightTop( points, scrollTop );
+		} else {
+			top = mapOffset( points, scrollTop );
+			height = mapOffset( points, scrollTop + clientHeight ) - top;
+		}
 
 		spotlight.hidden = false;
 		spotlight.style.transform = `translateY(${ top }px)`;
-		spotlight.style.height = `${ bottom - top }px`;
+		spotlight.style.height = `${ height }px`;
+	}
+
+	/**
+	 * How far through the post the canvas is scrolled, from 0 at the top to
+	 * 1 where the end of the content comes into view.
+	 *
+	 * @param {number} scrollTop Canvas scroll position.
+	 * @return {number} Progress from 0 to 1.
+	 */
+	canvasProgress( scrollTop ) {
+		const scrollable =
+			getCanvasContentEnd( this.canvas ) -
+			this.canvas.scroller.clientHeight;
+
+		return scrollable > 0
+			? Math.min( 1, Math.max( 0, scrollTop / scrollable ) )
+			: 0;
+	}
+
+	/**
+	 * The minimap scroll position that goes with a canvas scroll position
+	 * while the lens is on.
+	 *
+	 * The spotlight slides from where the minimap starts in the sidebar, at
+	 * the top of the post, to the bottom of the sidebar, at its end, at the
+	 * same pace as the canvas progresses.
+	 *
+	 * @param {number[][]} points    Breakpoints from getSpotlightBreakpoints().
+	 * @param {number}     scrollTop Canvas scroll position.
+	 * @return {?number} Minimap scroll position, or null if it cannot scroll.
+	 */
+	lensMinimapScroll( points, scrollTop ) {
+		const scroller = this.minimapScroller;
+		const max = scroller.scrollHeight - scroller.clientHeight;
+
+		if ( max <= 0 ) {
+			return null;
+		}
+
+		const containerTop = contentOffset( this.container, scroller );
+		const below =
+			scroller.scrollHeight -
+			containerTop -
+			this.container.offsetHeight;
+		const lowest = scroller.clientHeight - below - this.lens.height;
+		// Where in the sidebar viewport the spotlight should sit.
+		const slot =
+			containerTop +
+			( lowest - containerTop ) * this.canvasProgress( scrollTop );
+
+		return Math.min(
+			max,
+			Math.max(
+				0,
+				containerTop + this.spotlightTop( points, scrollTop ) - slot
+			)
+		);
+	}
+
+	/**
+	 * The canvas scroll position that goes with a minimap scroll position
+	 * while the lens is on: the inverse of lensMinimapScroll(), found by
+	 * bisection since that only runs forward.
+	 *
+	 * @param {number[][]} points    Breakpoints from getSpotlightBreakpoints().
+	 * @param {number}     scrollTop Minimap scroll position.
+	 * @return {number} Canvas scroll position.
+	 */
+	lensCanvasScroll( points, scrollTop ) {
+		const { scrollHeight, clientHeight } = this.canvas.scroller;
+
+		return bisect( 0, Math.max( 0, scrollHeight - clientHeight ), ( s ) =>
+			( this.lensMinimapScroll( points, s ) || 0 ) < scrollTop
+		);
+	}
+
+	/**
+	 * Where a spotlight of the lens height goes for a canvas scroll position.
+	 *
+	 * The spotlight rides the same sliding reference line as the scroll
+	 * sync: a line that moves from the top of the canvas viewport to its
+	 * bottom as the canvas scrolls from the top of the post to its end. The
+	 * content under that line maps into the minimap, and the spotlight sits
+	 * the same share of its height above it, so it starts at the top of the
+	 * minimap and ends at its end.
+	 *
+	 * @param {number[][]} points    Breakpoints from getSpotlightBreakpoints().
+	 * @param {number}     scrollTop Canvas scroll position.
+	 * @return {number} Spotlight offset from the top of the minimap.
+	 */
+	spotlightTop( points, scrollTop ) {
+		const { clientHeight } = this.canvas.scroller;
+		const progress = this.canvasProgress( scrollTop );
+		const reference = mapOffset(
+			points,
+			scrollTop + clientHeight * progress
+		);
+
+		return Math.min(
+			this.container.offsetHeight - this.lens.height,
+			Math.max( 0, reference - this.lens.height * progress )
+		);
 	}
 
 	hideSpotlight() {
@@ -710,13 +985,31 @@ export default class ScrollSync {
 		);
 
 		scroller.scrollTo( {
-			top: mapOffset( points, top, true ),
+			top: this.lens
+				? this.scrollTopFor( points, top )
+				: mapOffset( points, top, true ),
 			behavior: 'instant',
 		} );
 		this.markInView( canvasAnchors );
 		this.updateSpotlight(
 			canvasAnchors,
 			getMinimapAnchors( this.container, this.minimapScroller )
+		);
+	}
+
+	/**
+	 * The canvas scroll position that puts the spotlight's top at a given
+	 * offset, found by bisection since spotlightTop() only runs forward.
+	 *
+	 * @param {number[][]} points Breakpoints from getSpotlightBreakpoints().
+	 * @param {number}     top    Wanted spotlight offset in the minimap.
+	 * @return {number} Canvas scroll position.
+	 */
+	scrollTopFor( points, top ) {
+		const { scrollHeight, clientHeight } = this.canvas.scroller;
+
+		return bisect( 0, Math.max( 0, scrollHeight - clientHeight ), ( s ) =>
+			this.spotlightTop( points, s ) < top
 		);
 	}
 
