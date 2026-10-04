@@ -6,16 +6,15 @@ const { debounce, map } = lodash;
 import './block-minimap.css';
 import { resolveRenderer } from './renderers';
 import ScrollSync, { ENTRY_ATTRIBUTE } from './scroll-sync';
-import { SIZES, SIZE_OPTIONS, autoSize, getSavedSize, saveSize } from './size';
+import {
+	SIZES,
+	SIZE_OPTIONS,
+	autoSize,
+	contentWeight,
+	getSavedSize,
+	saveSize,
+} from './size';
 import { getSavedSpotlight, saveSpotlight } from './spotlight';
-
-/**
- * How many blocks the post holds, including nested ones.
- *
- * @return {number} The block count.
- */
-const countBlocks = () =>
-	select( 'core/block-editor' ).getClientIdsWithDescendants().length;
 
 /**
  * One block's minimap entry.
@@ -68,7 +67,7 @@ export default class Minimap extends PureComponent {
 			blocks: select( 'core/block-editor' ).getBlocks(),
 			title: select( 'core/editor' ).getEditedPostAttribute( 'title' ),
 			size: getSavedSize(),
-			autoSize: autoSize( countBlocks() ),
+			autoSize: autoSize( contentWeight() ),
 			spotlight: getSavedSpotlight(),
 		};
 		this.containerRef = createRef();
@@ -158,7 +157,7 @@ export default class Minimap extends PureComponent {
 			autoSize:
 				blocks === this.state.blocks
 					? this.state.autoSize
-					: autoSize( countBlocks(), this.state.autoSize ),
+					: autoSize( contentWeight(), this.state.autoSize ),
 		} );
 	}
 

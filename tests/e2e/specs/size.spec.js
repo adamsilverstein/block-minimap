@@ -25,6 +25,24 @@ const sizeControl = ( page ) =>
 	page.getByRole( 'combobox', { name: 'Minimap size' } );
 
 /**
+ * Replaces the post content with one line paragraphs, so the content weight
+ * comes down to the block count.
+ *
+ * @param {import('@playwright/test').Page} page  Playwright page.
+ * @param {number}                          count How many paragraphs.
+ */
+const fillWithShortParagraphs = ( page, count ) =>
+	page.evaluate( ( total ) => {
+		window.wp.data.dispatch( 'core/block-editor' ).resetBlocks(
+			Array.from( { length: total }, ( _, index ) =>
+				window.wp.blocks.createBlock( 'core/paragraph', {
+					content: `Line ${ index }`,
+				} )
+			)
+		);
+	}, count );
+
+/**
  * Saves a size preference straight to the store, as the control would.
  *
  * @param {import('@playwright/test').Page} page Playwright page.
@@ -63,10 +81,10 @@ test.describe( 'Minimap size', () => {
 
 		for ( const [ count, size ] of [
 			[ 5, 'full' ],
-			[ 60, 'two-thirds' ],
-			[ 120, 'half' ],
+			[ 50, 'two-thirds' ],
+			[ 100, 'half' ],
 		] ) {
-			await fillWithParagraphs( page, count );
+			await fillWithShortParagraphs( page, count );
 			await expect( getMinimap( page ) ).toHaveClass(
 				new RegExp( `\\bis-size-${ size }\\b` )
 			);
@@ -78,15 +96,28 @@ test.describe( 'Minimap size', () => {
 	} ) => {
 		await openMinimap( page );
 
-		await fillWithParagraphs( page, 45 );
+		await fillWithShortParagraphs( page, 35 );
 		await expect( getMinimap( page ) ).toHaveClass( /\bis-size-two-thirds\b/ );
 
 		// Just under the threshold: no jump back to full size.
-		await fillWithParagraphs( page, 38 );
+		await fillWithShortParagraphs( page, 25 );
 		await expect( getMinimap( page ) ).toHaveClass( /\bis-size-two-thirds\b/ );
 
-		await fillWithParagraphs( page, 25 );
+		await fillWithShortParagraphs( page, 15 );
 		await expect( getMinimap( page ) ).toHaveClass( /\bis-size-full\b/ );
+	} );
+
+	test( 'Automatic weighs long text as well as blocks', async ( {
+		page,
+	} ) => {
+		await openMinimap( page );
+
+		// Few enough blocks for full size, if only blocks counted.
+		await fillWithShortParagraphs( page, 25 );
+		await expect( getMinimap( page ) ).toHaveClass( /\bis-size-full\b/ );
+
+		await fillWithParagraphs( page, 25 );
+		await expect( getMinimap( page ) ).toHaveClass( /\bis-size-two-thirds\b/ );
 	} );
 
 	test( 'a chosen size applies and is saved as a preference', async ( {
