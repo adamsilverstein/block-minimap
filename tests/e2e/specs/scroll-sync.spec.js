@@ -6,7 +6,11 @@ const { test, expect } = require( '@wordpress/e2e-test-utils-playwright' );
 /**
  * Internal dependencies
  */
-const { openMinimap, getMinimap } = require( '../utils/minimap' );
+const {
+	openMinimap,
+	getMinimap,
+	saveSpotlight,
+} = require( '../utils/minimap' );
 const {
 	fillWithParagraphs,
 	inMinimapScroller,
@@ -20,6 +24,11 @@ const PARAGRAPH_COUNT = 60;
 test.describe( 'Scroll sync', () => {
 	test.beforeEach( async ( { admin, editor, page } ) => {
 		await admin.createNewPost( { title: 'A long post' } );
+		/*
+		 * The spotlight scrolls the minimap its own way, covered in its own
+		 * spec; this one covers the plain sync.
+		 */
+		await saveSpotlight( page, false );
 		await editor.insertBlock( { name: 'core/paragraph' } );
 		await fillWithParagraphs( page, PARAGRAPH_COUNT );
 
@@ -27,6 +36,10 @@ test.describe( 'Scroll sync', () => {
 		await expect(
 			getMinimap( page ).locator( ':scope > .core-paragraph' )
 		).toHaveCount( PARAGRAPH_COUNT );
+	} );
+
+	test.afterEach( async ( { page } ) => {
+		await saveSpotlight( page, true );
 	} );
 
 	test( 'tags each top level entry with its block', async ( {

@@ -309,7 +309,7 @@ pre.minimap-pre {
  * line and stops where the last line does, so the bars keep the shape of
  * each paragraph.
  */
-#minimap-container.is-compact .minimap-ink {
+#minimap-container.is-compact .minimap-ink:not([data-minimap-in-view], [data-minimap-in-view] *) {
 	color: transparent;
 	background-color: #c3c4c7;
 	border-radius: 1px;
@@ -317,7 +317,7 @@ pre.minimap-pre {
 	box-decoration-break: clone;
 }
 
-#minimap-container.is-compact .minimap-ink * {
+#minimap-container.is-compact .minimap-ink:not([data-minimap-in-view], [data-minimap-in-view] *) * {
 	color: transparent;
 }
 
@@ -326,26 +326,21 @@ pre.minimap-pre {
  * set smaller than its pitch: thin bars with a gap between them, and more
  * words to a line.
  */
-#minimap-container.is-compact .minimap-text,
-#minimap-container.is-compact pre.minimap-pre,
-#minimap-container.is-compact .core-list li,
-#minimap-container.is-compact .core-table td,
-#minimap-container.is-compact .core-table th {
+#minimap-container.is-compact .minimap-text:not([data-minimap-in-view], [data-minimap-in-view] *),
+#minimap-container.is-compact pre.minimap-pre:not([data-minimap-in-view], [data-minimap-in-view] *),
+#minimap-container.is-compact .core-list li:not([data-minimap-in-view], [data-minimap-in-view] *),
+#minimap-container.is-compact .core-table td:not([data-minimap-in-view], [data-minimap-in-view] *),
+#minimap-container.is-compact .core-table th:not([data-minimap-in-view], [data-minimap-in-view] *) {
 	font-size: calc( 6px * var( --minimap-scale ) );
 	line-height: calc( 11px * var( --minimap-scale ) );
 }
 
-#minimap-container.is-compact .minimap-text {
+#minimap-container.is-compact .minimap-text:not([data-minimap-in-view], [data-minimap-in-view] *) {
 	-webkit-line-clamp: 4;
 }
 
 /* Headings and the title stay real text, so the outline is scannable. */
-#minimap-container.is-compact h1,
-#minimap-container.is-compact h2,
-#minimap-container.is-compact h3,
-#minimap-container.is-compact h4,
-#minimap-container.is-compact h5,
-#minimap-container.is-compact h6 {
+#minimap-container.is-compact :is( h1, h2, h3, h4, h5, h6 ):not([data-minimap-in-view], [data-minimap-in-view] *) {
 	margin-top: calc( 6px * var( --minimap-scale ) );
 	font-size: 9px;
 	line-height: 1.2;
@@ -353,9 +348,98 @@ pre.minimap-pre {
 	color: #1e1e1e;
 }
 
-#minimap-container.is-compact .minimap-block.title {
+#minimap-container.is-compact .minimap-block.title:not([data-minimap-in-view], [data-minimap-in-view] *) {
 	font-size: 12px;
 	line-height: 1.2;
 	font-weight: 600;
 	color: #1e1e1e;
+}
+
+/*
+ * Inside the spotlight, entries whose blocks show in the canvas draw as a
+ * miniature of the canvas's text column: real text at the column's size,
+ * line height and block gap scaled to the minimap's width, with nothing
+ * clamped, so the framed part lines up with what the canvas shows. The
+ * scroll sync measures the column and sets the `--minimap-lens-*`
+ * properties. The compact rules that do not scale with `--minimap-scale`
+ * skip these entries.
+ */
+#minimap-container > .minimap-block[data-minimap-in-view] {
+	--minimap-scale: var( --minimap-lens, 1 );
+	font-size: var( --minimap-lens-font, 9.1px );
+	line-height: var( --minimap-lens-leading, 1.2 );
+	margin-bottom: var( --minimap-lens-gap, 10px );
+}
+
+#minimap-container > .minimap-block:is( h1, h2, h3, h4, h5, h6 )[data-minimap-in-view] {
+	font-size: calc(
+		var( --minimap-lens-font, 9.1px ) * var( --minimap-lens-heading, 1.6 )
+	);
+	line-height: 1.2;
+}
+
+#minimap-container > .minimap-block.title[data-minimap-in-view] {
+	font-size: calc( var( --minimap-lens-font, 9.1px ) * 2 );
+}
+
+#minimap-container > [data-minimap-in-view] .minimap-text,
+#minimap-container > .minimap-text[data-minimap-in-view],
+#minimap-container > [data-minimap-in-view] pre.minimap-pre,
+#minimap-container > pre.minimap-pre[data-minimap-in-view] {
+	display: block;
+	-webkit-line-clamp: unset;
+	line-height: var( --minimap-lens-leading, 1.2 );
+}
+
+/*
+ * The viewport spotlight (#62): the part of the minimap visible in the
+ * canvas stays at full contrast inside a theme color frame, and a wash
+ * dims the rest. The wash is the frame's own spread shadow, clipped to the
+ * stage, so there is one element to position and nothing to keep in sync.
+ */
+.minimap-stage {
+	position: relative;
+	overflow: clip;
+}
+
+/* Room for the frame to sit just outside the entries. */
+.minimap-stage.has-spotlight {
+	padding: 0 4px;
+}
+
+.minimap-spotlight {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	min-height: 8px;
+	box-sizing: border-box;
+	border: 1.5px solid var( --wp-admin-theme-color, #3858e9 );
+	border-radius: 4px;
+	box-shadow: 0 0 0 100vmax rgba( 255, 255, 255, 0.5 );
+	cursor: grab;
+	touch-action: none;
+	/*
+	 * No transition: the frame moves every animation frame along with the
+	 * scroll sync, and easing it would let it lag behind the minimap.
+	 */
+	will-change: transform;
+}
+
+.minimap-spotlight[hidden] {
+	display: none;
+}
+
+.minimap-spotlight.is-dragging {
+	cursor: grabbing;
+}
+
+/* Forced colors drop shadows, so draw the frame in the system color. */
+@media ( forced-colors: active ) {
+	.minimap-spotlight {
+		border: none;
+		box-shadow: none;
+		outline: 2px solid Highlight;
+		outline-offset: -2px;
+	}
 }

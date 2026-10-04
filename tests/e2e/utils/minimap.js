@@ -72,7 +72,24 @@ function getMinimapTitle( page ) {
 	return getMinimap( page ).locator( '.minimap-block.title' );
 }
 
+/**
+ * Saves the spotlight preference straight to the store, as the toggle would.
+ *
+ * @param {import('@playwright/test').Page} page    Playwright page.
+ * @param {?boolean}                        enabled Whether it shows.
+ */
+function saveSpotlight( page, enabled ) {
+	return page.evaluate(
+		( value ) =>
+			window.wp.data
+				.dispatch( 'core/preferences' )
+				.set( 'block-minimap', 'spotlight', value ),
+		enabled
+	);
+}
+
 module.exports = {
+	saveSpotlight,
 	TEST_IMAGE_URL,
 	openMinimap,
 	closeMinimap,

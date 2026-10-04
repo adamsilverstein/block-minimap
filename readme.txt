@@ -4,7 +4,7 @@ Tags: minimap, navigation, block editor, gutenberg, outline
 Requires at least: 5.4
 Tested up to: 7.1
 Requires PHP: 5.6
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
@@ -17,6 +17,8 @@ Long posts get hard to navigate in the block editor. Block Minimap adds a sideba
 * **Every block gets a shape.** Headings, paragraphs, lists, quotes, tables, code, images, galleries, media and text, buttons, social links, embeds and more each render as a small sketch of what they look like in the post. Third party blocks without their own shape fall back to their block icon and title.
 * **Nested blocks show the document tree.** Groups, covers and other container blocks draw their inner blocks inside them, and Columns sit side by side the way they do in the post.
 * **Scroll sync.** The minimap and the editor canvas stay scrolled to the same content. Scroll the post and the minimap follows; scroll the minimap and the post follows.
+* **Compact sizes.** Below 100%, body text draws as gray bars the length of each line while headings stay readable, so a long post fits in fewer sidebar screens. Automatic picks a size from the length of the post.
+* **Viewport spotlight.** A frame marks the part of the minimap visible in the editor and dims the rest. Drag the frame to scroll the post.
 * **Safe previews.** Custom HTML, shortcode and classic blocks render as escaped source rather than live markup.
 
 Open the minimap from the Block Minimap item in the editor's Options menu.
@@ -37,6 +39,10 @@ Development takes place in the [GitHub repository](https://github.com/adamsilver
 
 == Changelog ==
 
+= 1.2.0 =
+* A size control for the minimap: Automatic, 100%, 2/3 and 1/2. Below 100%, body text draws as gray bars while headings stay readable.
+* A spotlight marks the part of the minimap visible in the editor and dims the rest, drawing it as a miniature of the editor. Drag it to scroll the post, or turn it off with Highlight visible area.
+
 = 1.1.0 =
 * Minimap representations for all block types, including third party blocks.
 * Nested blocks render as the document tree, with Columns side by side.
@@ -53,6 +59,9 @@ Added
 * Initial plugin release 🎉
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+Compact minimap sizes for long posts, and a spotlight showing which part of the post is in view.
 
 = 1.1.0 =
 Draws every block type in its own shape, shows nested blocks and Columns as the document tree, and keeps the minimap scrolled in sync with the editor. Now requires WordPress 5.4 or later.

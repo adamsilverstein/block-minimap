@@ -6,6 +6,31 @@ const { select } = wp.data;
  */
 export const ENTRY_ATTRIBUTE = 'data-minimap-block';
 
+/**
+ * Marks the minimap entries whose blocks are visible in the canvas, so the
+ * compact sizes can draw them at full size inside the spotlight.
+ */
+export const IN_VIEW_ATTRIBUTE = 'data-minimap-in-view';
+
+/*
+ * The body text size of a full size minimap entry, in pixels: entries are
+ * set at .7em of the sidebar's 13px.
+ */
+const ENTRY_FONT_SIZE = 13 * 0.7;
+
+/*
+ * The range the magnified entries draw in, as a fraction of full size, so
+ * a very wide or very narrow canvas column still leaves them readable.
+ */
+const MIN_LENS = 0.5;
+const MAX_LENS = 1.2;
+
+/*
+ * The most of the sidebar the spotlight may cover, so a tall canvas beside
+ * a short sidebar still leaves the rest of the minimap in sight.
+ */
+const MAX_SPOTLIGHT_SHARE = 0.8;
+
 /** Pairs the post title in the canvas with the title entry in the minimap. */
 const TITLE_ID = 'title';
 
@@ -120,6 +145,27 @@ function getCanvasAnchors( canvas ) {
 }
 
 /**
+ * Where the post's content ends in the canvas: the bottom of its last top
+ * level block, short of the padding the editor leaves below it.
+ *
+ * @param {Object} canvas The canvas view.
+ * @return {number} Offset from the top of the scrolled content.
+ */
+function getCanvasContentEnd( canvas ) {
+	const order = select( 'core/block-editor' ).getBlockOrder();
+	const last =
+		order.length &&
+		canvas.root.querySelector(
+			`[data-block="${ order[ order.length - 1 ] }"]`
+		);
+
+	return last
+		? contentOffset( last, canvas.scroller ) +
+				last.getBoundingClientRect().height
+		: canvas.scroller.scrollHeight;
+}
+
+/**
  * The content offsets of the minimap's title and top level entries, keyed
  * by the ID of what they stand for.
  *
@@ -139,6 +185,99 @@ function getMinimapAnchors( container, scroller ) {
 	} );
 
 	return anchors;
+}
+
+/**
+ * Pairs up the anchors two views share, as breakpoints for mapping an offset
+ * in one view's content to the matching offset in the other's.
+ *
+ * Anchors that would step backward in either view are skipped, so the
+ * breakpoints always run forward in both and the mapping never folds back.
+ *
+ * @param {Map<string, number>} sourceAnchors Anchor offsets in the source.
+ * @param {Map<string, number>} targetAnchors Anchor offsets in the target.
+ * @param {number[]}            start         The [ source, target ] offsets
+ *                                            the content starts at.
+ * @param {number[]}            end           The [ source, target ] offsets
+ *                                            the content ends at.
+ * @return {number[][]} [ source, target ] breakpoints in document order.
+ */
+function getBreakpoints( sourceAnchors, targetAnchors, start, end ) {
+	const points = [ start ];
+
+	sourceAnchors.forEach( ( sourceOffset, id ) => {
+		const targetOffset = targetAnchors.get( id );
+		const [ lastSource, lastTarget ] = points[ points.length - 1 ];
+
+		if (
+			targetOffset !== undefined &&
+			sourceOffset > lastSource &&
+			targetOffset >= lastTarget
+		) {
+			points.push( [ sourceOffset, targetOffset ] );
+		}
+	} );
+
+	const [ lastSource, lastTarget ] = points[ points.length - 1 ];
+
+	points.push( [
+		Math.max( end[ 0 ], lastSource + 1 ),
+		Math.max( end[ 1 ], lastTarget ),
+	] );
+
+	return points;
+}
+
+/**
+ * Maps an offset through a set of breakpoints, interpolating between the
+ * two around it.
+ *
+ * @param {number[][]} points  Breakpoints from getBreakpoints().
+ * @param {number}     offset Offset in the source view.
+ * @param {boolean}    reverse Map from the target view to the source view
+ *                             instead.
+ * @return {number} The matching offset in the other view.
+ */
+function mapOffset( points, offset, reverse = false ) {
+	const from = reverse ? 1 : 0;
+	const to = reverse ? 0 : 1;
+	let index = 1;
+
+	while ( index < points.length - 1 && points[ index ][ from ] <= offset ) {
+		index++;
+	}
+
+	const before = points[ index - 1 ];
+	const after = points[ index ];
+	const span = after[ from ] - before[ from ];
+	const fraction =
+		span > 0
+			? Math.min( 1, Math.max( 0, ( offset - before[ from ] ) / span ) )
+			: 0;
+
+	return before[ to ] + fraction * ( after[ to ] - before[ to ] );
+}
+
+/**
+ * Finds where a condition that holds up to some point stops holding.
+ *
+ * @param {number}   low    Start of the range.
+ * @param {number}   high   End of the range.
+ * @param {Function} before Whether a value is still before the point.
+ * @return {number} The point, to within a small fraction of a pixel.
+ */
+function bisect( low, high, before ) {
+	for ( let step = 0; step < 24; step++ ) {
+		const middle = ( low + high ) / 2;
+
+		if ( before( middle ) ) {
+			low = middle;
+		} else {
+			high = middle;
+		}
+	}
+
+	return low;
 }
 
 /**
@@ -175,41 +314,13 @@ export function mapScrollPosition(
 	const progress =
 		sourceMax > 0 ? Math.min( 1, source.scrollTop / sourceMax ) : 0;
 	const reference = source.scrollTop + source.clientHeight * progress;
-
-	// Breakpoints in document order, each step forward in both views.
-	const points = [ [ 0, 0 ] ];
-
-	sourceAnchors.forEach( ( sourceOffset, id ) => {
-		const targetOffset = targetAnchors.get( id );
-		const [ lastSource, lastTarget ] = points[ points.length - 1 ];
-
-		if (
-			targetOffset !== undefined &&
-			sourceOffset > lastSource &&
-			targetOffset >= lastTarget
-		) {
-			points.push( [ sourceOffset, targetOffset ] );
-		}
-	} );
-
-	points.push( [
-		Math.max( source.scrollHeight, points[ points.length - 1 ][ 0 ] + 1 ),
-		Math.max( target.scrollHeight, points[ points.length - 1 ][ 1 ] ),
-	] );
-
-	let index = 1;
-
-	while ( index < points.length - 1 && points[ index ][ 0 ] <= reference ) {
-		index++;
-	}
-
-	const [ fromSource, fromTarget ] = points[ index - 1 ];
-	const [ toSource, toTarget ] = points[ index ];
-	const fraction = Math.min(
-		1,
-		Math.max( 0, ( reference - fromSource ) / ( toSource - fromSource ) )
+	const targetReference = mapOffset(
+		getBreakpoints( sourceAnchors, targetAnchors, [ 0, 0 ], [
+			source.scrollHeight,
+			target.scrollHeight,
+		] ),
+		reference
 	);
-	const targetReference = fromTarget + fraction * ( toTarget - fromTarget );
 
 	/*
 	 * Solve for the scroll position that puts targetReference under the
@@ -224,35 +335,51 @@ export function mapScrollPosition(
 
 /**
  * Keeps the minimap and the editor canvas scrolled to the same content, in
- * both directions.
+ * both directions, and moves the spotlight over the part of the minimap
+ * that is visible in the canvas.
  */
 export default class ScrollSync {
 	/**
-	 * @param {Element} container The minimap container.
+	 * @param {Element} container    The minimap container.
+	 * @param {Object}  spotlightRef Ref to the spotlight element, which is
+	 *                               only rendered while the spotlight is on.
 	 */
-	constructor( container ) {
+	constructor( container, spotlightRef ) {
 		this.container = container;
+		this.spotlightRef = spotlightRef;
 		this.canvas = null;
 		this.minimapScroller = null;
 		this.frame = null;
 		this.pendingSource = null;
+		this.drag = null;
+		this.dragFrame = null;
+		this.lens = null;
 		// The scroll position each side was last moved to by the sync itself.
 		this.expected = new Map();
 
 		this.onCanvasScroll = () => this.schedule( 'canvas' );
 		this.onMinimapScroll = () => this.schedule( 'minimap' );
 		this.attach = this.attach.bind( this );
+		this.syncFromCanvas = this.syncFromCanvas.bind( this );
+		this.startDrag = this.startDrag.bind( this );
+		this.moveDrag = this.moveDrag.bind( this );
+		this.endDrag = this.endDrag.bind( this );
 	}
 
 	start() {
 		this.attach();
 		this.interval = window.setInterval( this.attach, REATTACH_INTERVAL );
+		// A resize changes how much of the canvas is visible.
+		window.addEventListener( 'resize', this.syncFromCanvas );
 		this.syncFromCanvas();
 	}
 
 	stop() {
 		window.clearInterval( this.interval );
+		window.removeEventListener( 'resize', this.syncFromCanvas );
 		window.cancelAnimationFrame( this.frame );
+		window.cancelAnimationFrame( this.dragFrame );
+		this.drag = null;
 		this.detachCanvas();
 		this.detachMinimap();
 	}
@@ -336,6 +463,11 @@ export default class ScrollSync {
 	 * @param {boolean} force  Sync even if the scroll was the sync's own.
 	 */
 	schedule( source, force = false ) {
+		// While the spotlight is dragged, the drag moves the canvas itself.
+		if ( this.drag && source === 'canvas' ) {
+			return;
+		}
+
 		if ( ! force && this.isEcho( source ) ) {
 			return;
 		}
@@ -381,10 +513,15 @@ export default class ScrollSync {
 
 	sync( source ) {
 		if ( ! this.canvas || ! this.minimapScroller ) {
+			this.hideSpotlight();
 			return;
 		}
 
 		const canvasAnchors = getCanvasAnchors( this.canvas );
+
+		// Magnifying entries changes the minimap's layout, so it goes first.
+		this.markInView( canvasAnchors );
+
 		const minimapAnchors = getMinimapAnchors(
 			this.container,
 			this.minimapScroller
@@ -392,29 +529,545 @@ export default class ScrollSync {
 		const fromCanvas = source === 'canvas';
 		const target = fromCanvas ? 'minimap' : 'canvas';
 		const targetScroller = this.getScroller( target );
-		const position = fromCanvas
-			? mapScrollPosition(
-					this.canvas.scroller,
-					canvasAnchors,
-					targetScroller,
-					minimapAnchors
-			  )
-			: mapScrollPosition(
-					this.minimapScroller,
-					minimapAnchors,
-					targetScroller,
-					canvasAnchors
-			  );
+		const lensPoints =
+			this.lens &&
+			this.getSpotlightBreakpoints( canvasAnchors, minimapAnchors );
+		let position;
+
+		/*
+		 * With the lens on, the minimap scrolls so the spotlight slides
+		 * smoothly down the sidebar: entries growing or shrinking as they
+		 * come into view then move the content around the spotlight, not
+		 * the spotlight itself.
+		 */
+		if ( lensPoints ) {
+			position = fromCanvas
+				? this.lensMinimapScroll(
+						lensPoints,
+						this.canvas.scroller.scrollTop
+				  )
+				: this.lensCanvasScroll(
+						lensPoints,
+						this.minimapScroller.scrollTop
+				  );
+		} else {
+			position = fromCanvas
+				? mapScrollPosition(
+						this.canvas.scroller,
+						canvasAnchors,
+						targetScroller,
+						minimapAnchors
+				  )
+				: mapScrollPosition(
+						this.minimapScroller,
+						minimapAnchors,
+						targetScroller,
+						canvasAnchors
+				  );
+		}
 
 		if (
-			position === null ||
-			Math.abs( targetScroller.scrollTop - position ) < 1
+			position !== null &&
+			Math.abs( targetScroller.scrollTop - position ) >= 1
+		) {
+			targetScroller.scrollTo( { top: position, behavior: 'instant' } );
+			// Read back what the browser settled on, which may be rounded.
+			this.expected.set( target, targetScroller.scrollTop );
+		}
+
+		this.updateSpotlight( canvasAnchors, minimapAnchors );
+	}
+
+	/**
+	 * Marks the entries whose blocks show in the canvas viewport, or clears
+	 * the marks while the spotlight is off or has nothing to single out.
+	 *
+	 * Which blocks are in view depends only on the canvas, so magnifying
+	 * them never feeds back into which ones are magnified.
+	 *
+	 * @param {Map<string, number>} canvasAnchors Canvas anchor offsets.
+	 */
+	markInView( canvasAnchors ) {
+		const enabled = !! this.spotlightRef.current && ! this.canvasShowsAll();
+		const { scrollTop, clientHeight } = this.canvas.scroller;
+		const viewBottom = scrollTop + clientHeight;
+		const tops = Array.from( canvasAnchors.values() );
+		const inView = new Set();
+
+		Array.from( canvasAnchors.keys() ).forEach( ( id, index ) => {
+			const top = tops[ index ];
+			const bottom =
+				index + 1 < tops.length
+					? tops[ index + 1 ]
+					: getCanvasContentEnd( this.canvas );
+
+			if ( top < viewBottom && bottom > scrollTop ) {
+				inView.add( id );
+			}
+		} );
+
+		Array.from( this.container.children ).forEach( ( entry ) => {
+			const show =
+				enabled && inView.has( entry.getAttribute( ENTRY_ATTRIBUTE ) );
+
+			if ( show !== entry.hasAttribute( IN_VIEW_ATTRIBUTE ) ) {
+				entry.toggleAttribute( IN_VIEW_ATTRIBUTE, show );
+			}
+		} );
+
+		this.lens = enabled ? this.measureLens( inView ) : null;
+
+		if ( this.lens ) {
+			const { style } = this.container;
+
+			Object.entries( this.lens.properties ).forEach(
+				( [ name, value ] ) => {
+					if ( style.getPropertyValue( name ) !== value ) {
+						style.setProperty( name, value );
+					}
+				}
+			);
+		}
+	}
+
+	/**
+	 * Measures the lens: how the entries inside the spotlight draw so they
+	 * are a miniature of the canvas's text column, and how tall that makes
+	 * the spotlight.
+	 *
+	 * The column scaled down to the width of a minimap entry sets the text
+	 * size, line height and gap between blocks, and the canvas viewport
+	 * scaled the same way sets the spotlight's height. All of it depends on
+	 * the canvas layout alone, not on where it is scrolled, so the
+	 * spotlight keeps one size while scrolling.
+	 *
+	 * @param {Set<string>} inView IDs of the blocks in view.
+	 * @return {?Object} The lens, or null without a column to measure.
+	 */
+	measureLens( inView ) {
+		const entry = this.container.firstElementChild;
+		const order = select( 'core/block-editor' ).getBlockOrder();
+
+		/*
+		 * The column is measured from the blocks in view, so the gap below
+		 * it matches what the canvas shows. When those are all set wide or
+		 * full, any other block in the post gives the same column width,
+		 * so the spotlight keeps its size over a full width cover.
+		 */
+		const column =
+			this.findColumn( Array.from( inView ) ) || this.findColumn( order );
+
+		if ( ! entry || ! column || ! column.offsetWidth ) {
+			return null;
+		}
+
+		const view = column.ownerDocument.defaultView;
+		const root = column.parentElement || column;
+		const fontSize = parseFloat( view.getComputedStyle( root ).fontSize );
+		const ratio = entry.offsetWidth / column.offsetWidth;
+		const lens = Math.min(
+			MAX_LENS,
+			Math.max( MIN_LENS, ( fontSize * ratio ) / ENTRY_FONT_SIZE )
+		);
+		const style = view.getComputedStyle( column );
+		const leading =
+			parseFloat( style.lineHeight ) / parseFloat( style.fontSize );
+		const next = column.nextElementSibling;
+		const gap = next
+			? next.getBoundingClientRect().top -
+			  column.getBoundingClientRect().bottom
+			: fontSize;
+		const heading = this.canvas.root.querySelector(
+			'.is-root-container > h2, .is-root-container > h3'
+		);
+		const headingScale = heading
+			? parseFloat( view.getComputedStyle( heading ).fontSize ) /
+			  fontSize
+			: 1.6;
+		const height = Math.min(
+			this.canvas.scroller.clientHeight * ratio,
+			this.minimapScroller.clientHeight * MAX_SPOTLIGHT_SHARE
+		);
+		// Rounded so a subpixel change in the canvas does not redraw.
+		const round = ( value ) => Math.round( value * 100 ) / 100;
+
+		return {
+			height,
+			properties: {
+				'--minimap-lens': String( round( lens ) ),
+				'--minimap-lens-font': `${ round(
+					lens * ENTRY_FONT_SIZE
+				) }px`,
+				'--minimap-lens-leading': Number.isFinite( leading )
+					? String( round( leading ) )
+					: '1.2',
+				'--minimap-lens-heading': String( round( headingScale ) ),
+				'--minimap-lens-gap': `${ round(
+					Math.max( 0, gap ) * ratio
+				) }px`,
+			},
+		};
+	}
+
+	/**
+	 * Finds the text column among some blocks: the widest one not set wide
+	 * or full.
+	 *
+	 * @param {string[]} ids Client IDs of the blocks to look through.
+	 * @return {?Element} The block, if any of them is in the column.
+	 */
+	findColumn( ids ) {
+		let column = null;
+
+		ids.forEach( ( id ) => {
+			const block =
+				id !== TITLE_ID &&
+				this.canvas.root.querySelector( `[data-block="${ id }"]` );
+
+			if (
+				block &&
+				! block.classList.contains( 'alignwide' ) &&
+				! block.classList.contains( 'alignfull' ) &&
+				( ! column || block.offsetWidth > column.offsetWidth )
+			) {
+				column = block;
+			}
+		} );
+
+		return column;
+	}
+
+	/**
+	 * Whether the canvas shows the whole post at once, leaving the
+	 * spotlight nothing to single out.
+	 *
+	 * @return {boolean} True when all of the content is in view.
+	 */
+	canvasShowsAll() {
+		const { scrollTop, clientHeight } = this.canvas.scroller;
+
+		return (
+			scrollTop < 1 &&
+			scrollTop + clientHeight >= getCanvasContentEnd( this.canvas ) - 1
+		);
+	}
+
+	/**
+	 * Breakpoints from canvas content offsets to offsets within the minimap
+	 * container, for placing the spotlight.
+	 *
+	 * The canvas content starts and ends where the minimap container does,
+	 * and the shared anchors line them up in between.
+	 *
+	 * @param {Map<string, number>} canvasAnchors  Canvas anchor offsets.
+	 * @param {Map<string, number>} minimapAnchors Minimap anchor offsets.
+	 * @return {number[][]} [ canvas, container ] breakpoints.
+	 */
+	getSpotlightBreakpoints( canvasAnchors, minimapAnchors ) {
+		const containerTop = contentOffset(
+			this.container,
+			this.minimapScroller
+		);
+		const inContainer = new Map();
+
+		minimapAnchors.forEach( ( offset, id ) =>
+			inContainer.set( id, offset - containerTop )
+		);
+
+		return getBreakpoints( canvasAnchors, inContainer, [ 0, 0 ], [
+			getCanvasContentEnd( this.canvas ),
+			this.container.offsetHeight,
+		] );
+	}
+
+	/**
+	 * Frames the part of the minimap that matches what the canvas shows.
+	 *
+	 * The canvas viewport's top and bottom edges map into the minimap
+	 * separately, so the frame grows over dense text and shrinks over tall
+	 * media rather than assuming the two are in proportion.
+	 *
+	 * @param {Map<string, number>} canvasAnchors  Canvas anchor offsets.
+	 * @param {Map<string, number>} minimapAnchors Minimap anchor offsets.
+	 */
+	updateSpotlight( canvasAnchors, minimapAnchors ) {
+		const spotlight = this.spotlightRef.current;
+
+		if ( ! spotlight ) {
+			return;
+		}
+
+		// With the whole post in view there is nothing to single out.
+		if ( this.canvasShowsAll() ) {
+			this.hideSpotlight();
+			return;
+		}
+
+		const points = this.getSpotlightBreakpoints(
+			canvasAnchors,
+			minimapAnchors
+		);
+		const { scrollTop, clientHeight } = this.canvas.scroller;
+		let top;
+		let height;
+
+		if ( this.lens ) {
+			height = this.lens.height;
+			top = this.spotlightTop( points, scrollTop );
+		} else {
+			top = mapOffset( points, scrollTop );
+			height = mapOffset( points, scrollTop + clientHeight ) - top;
+		}
+
+		spotlight.hidden = false;
+		spotlight.style.transform = `translateY(${ top }px)`;
+		spotlight.style.height = `${ height }px`;
+	}
+
+	/**
+	 * How far through the post the canvas is scrolled, from 0 at the top to
+	 * 1 where the end of the content comes into view.
+	 *
+	 * @param {number} scrollTop Canvas scroll position.
+	 * @return {number} Progress from 0 to 1.
+	 */
+	canvasProgress( scrollTop ) {
+		const scrollable =
+			getCanvasContentEnd( this.canvas ) -
+			this.canvas.scroller.clientHeight;
+
+		return scrollable > 0
+			? Math.min( 1, Math.max( 0, scrollTop / scrollable ) )
+			: 0;
+	}
+
+	/**
+	 * The minimap scroll position that goes with a canvas scroll position
+	 * while the lens is on.
+	 *
+	 * The spotlight slides from where the minimap starts in the sidebar, at
+	 * the top of the post, to the bottom of the sidebar, at its end, at the
+	 * same pace as the canvas progresses.
+	 *
+	 * @param {number[][]} points    Breakpoints from getSpotlightBreakpoints().
+	 * @param {number}     scrollTop Canvas scroll position.
+	 * @return {?number} Minimap scroll position, or null if it cannot scroll.
+	 */
+	lensMinimapScroll( points, scrollTop ) {
+		const scroller = this.minimapScroller;
+		const max = scroller.scrollHeight - scroller.clientHeight;
+
+		if ( max <= 0 ) {
+			return null;
+		}
+
+		const containerTop = contentOffset( this.container, scroller );
+		const below =
+			scroller.scrollHeight -
+			containerTop -
+			this.container.offsetHeight;
+		const lowest = scroller.clientHeight - below - this.lens.height;
+		// Where in the sidebar viewport the spotlight should sit.
+		const slot =
+			containerTop +
+			( lowest - containerTop ) * this.canvasProgress( scrollTop );
+
+		return Math.min(
+			max,
+			Math.max(
+				0,
+				containerTop + this.spotlightTop( points, scrollTop ) - slot
+			)
+		);
+	}
+
+	/**
+	 * The canvas scroll position that goes with a minimap scroll position
+	 * while the lens is on: the inverse of lensMinimapScroll(), found by
+	 * bisection since that only runs forward.
+	 *
+	 * @param {number[][]} points    Breakpoints from getSpotlightBreakpoints().
+	 * @param {number}     scrollTop Minimap scroll position.
+	 * @return {number} Canvas scroll position.
+	 */
+	lensCanvasScroll( points, scrollTop ) {
+		const { scrollHeight, clientHeight } = this.canvas.scroller;
+
+		return bisect( 0, Math.max( 0, scrollHeight - clientHeight ), ( s ) =>
+			( this.lensMinimapScroll( points, s ) || 0 ) < scrollTop
+		);
+	}
+
+	/**
+	 * Where a spotlight of the lens height goes for a canvas scroll position.
+	 *
+	 * The spotlight rides the same sliding reference line as the scroll
+	 * sync: a line that moves from the top of the canvas viewport to its
+	 * bottom as the canvas scrolls from the top of the post to its end. The
+	 * content under that line maps into the minimap, and the spotlight sits
+	 * the same share of its height above it, so it starts at the top of the
+	 * minimap and ends at its end.
+	 *
+	 * @param {number[][]} points    Breakpoints from getSpotlightBreakpoints().
+	 * @param {number}     scrollTop Canvas scroll position.
+	 * @return {number} Spotlight offset from the top of the minimap.
+	 */
+	spotlightTop( points, scrollTop ) {
+		const { clientHeight } = this.canvas.scroller;
+		const progress = this.canvasProgress( scrollTop );
+		const reference = mapOffset(
+			points,
+			scrollTop + clientHeight * progress
+		);
+
+		return Math.max(
+			0,
+			Math.min(
+				this.spotlightTravel(),
+				reference - this.lens.height * progress
+			)
+		);
+	}
+
+	/**
+	 * How far a spotlight of the lens height can move down the minimap:
+	 * nothing when the minimap is shorter than the spotlight.
+	 *
+	 * @return {number} Travel in pixels.
+	 */
+	spotlightTravel() {
+		return Math.max( 0, this.container.offsetHeight - this.lens.height );
+	}
+
+	hideSpotlight() {
+		const spotlight = this.spotlightRef.current;
+
+		if ( spotlight ) {
+			spotlight.hidden = true;
+		}
+	}
+
+	/**
+	 * Starts dragging the spotlight, which scrolls the canvas.
+	 *
+	 * @param {PointerEvent} event The pointerdown event on the spotlight.
+	 */
+	startDrag( event ) {
+		const spotlight = event.currentTarget;
+
+		if (
+			event.button !== 0 ||
+			! this.canvas ||
+			! this.minimapScroller
 		) {
 			return;
 		}
 
-		targetScroller.scrollTo( { top: position, behavior: 'instant' } );
-		// Read back what the browser settled on, which may be rounded.
-		this.expected.set( target, targetScroller.scrollTop );
+		event.preventDefault();
+		// Keeps the drag tracking once the pointer leaves the sidebar.
+		spotlight.setPointerCapture( event.pointerId );
+
+		this.drag = {
+			pointerId: event.pointerId,
+			// Where on the frame it was grabbed, so it stays under the pointer.
+			grab: event.clientY - spotlight.getBoundingClientRect().top,
+			clientY: event.clientY,
+		};
+		spotlight.classList.add( 'is-dragging' );
+	}
+
+	/**
+	 * Follows the pointer, at most once a frame.
+	 *
+	 * @param {PointerEvent} event The pointermove event.
+	 */
+	moveDrag( event ) {
+		if ( ! this.drag || event.pointerId !== this.drag.pointerId ) {
+			return;
+		}
+
+		this.drag.clientY = event.clientY;
+
+		if ( this.dragFrame === null ) {
+			this.dragFrame = window.requestAnimationFrame( () => {
+				this.dragFrame = null;
+				this.dragTo();
+			} );
+		}
+	}
+
+	/**
+	 * Scrolls the canvas so the spotlight's top edge lands where the pointer
+	 * put it, mapping back from the minimap to the canvas through the same
+	 * breakpoints the spotlight is placed with. The minimap is measured
+	 * afresh each step, as the entries magnified inside the spotlight change
+	 * along the way.
+	 */
+	dragTo() {
+		if ( ! this.drag || ! this.canvas ) {
+			return;
+		}
+
+		const { clientY, grab } = this.drag;
+		const scroller = this.canvas.scroller;
+		const canvasAnchors = getCanvasAnchors( this.canvas );
+		const top =
+			clientY - grab - this.container.getBoundingClientRect().top;
+		const points = this.getSpotlightBreakpoints(
+			canvasAnchors,
+			getMinimapAnchors( this.container, this.minimapScroller )
+		);
+
+		scroller.scrollTo( {
+			top: this.lens
+				? this.scrollTopFor( points, top )
+				: mapOffset( points, top, true ),
+			behavior: 'instant',
+		} );
+		this.markInView( canvasAnchors );
+		this.updateSpotlight(
+			canvasAnchors,
+			getMinimapAnchors( this.container, this.minimapScroller )
+		);
+	}
+
+	/**
+	 * The canvas scroll position that puts the spotlight's top at a given
+	 * offset, found by bisection since spotlightTop() only runs forward.
+	 *
+	 * @param {number[][]} points Breakpoints from getSpotlightBreakpoints().
+	 * @param {number}     top    Wanted spotlight offset in the minimap.
+	 * @return {number} Canvas scroll position.
+	 */
+	scrollTopFor( points, top ) {
+		const { scrollTop, scrollHeight, clientHeight } = this.canvas.scroller;
+
+		// A spotlight covering the whole minimap has nowhere to be dragged.
+		if ( this.spotlightTravel() <= 0 ) {
+			return scrollTop;
+		}
+
+		return bisect( 0, Math.max( 0, scrollHeight - clientHeight ), ( s ) =>
+			this.spotlightTop( points, s ) < top
+		);
+	}
+
+	/**
+	 * Ends a drag and brings the minimap back in line with the canvas.
+	 *
+	 * @param {PointerEvent} event The pointerup, pointercancel or
+	 *                             lostpointercapture event.
+	 */
+	endDrag( event ) {
+		if ( ! this.drag || event.pointerId !== this.drag.pointerId ) {
+			return;
+		}
+
+		window.cancelAnimationFrame( this.dragFrame );
+		this.dragFrame = null;
+		this.dragTo();
+		this.drag = null;
+		event.currentTarget.classList.remove( 'is-dragging' );
+		this.syncFromCanvas();
 	}
 }
