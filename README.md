@@ -12,7 +12,7 @@
 
 The minimap and the editor scroll together: scrolling the post moves the minimap along with it, and scrolling the minimap moves the post. A frame marks the part of the minimap visible in the editor, with the rest dimmed, and dragging the frame scrolls the post.
 
-![Screencast of a long post scrolling down in the block editor with the Block Minimap following along in the sidebar, then the minimap scrolling back up and the post following it](.github/media/screencast.gif)
+![Screencast of a long post scrolling down in the block editor with the Block Minimap following along in the sidebar, then the spotlight frame being dragged down and back up the minimap as the post scrolls with it](.github/media/screencast.png)
 
 ## Requirements
 
