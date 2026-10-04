@@ -6,6 +6,12 @@ const { select } = wp.data;
  */
 export const ENTRY_ATTRIBUTE = 'data-minimap-block';
 
+/**
+ * Marks the minimap entries whose blocks are visible in the canvas, so the
+ * compact sizes can draw them at full size inside the spotlight.
+ */
+export const IN_VIEW_ATTRIBUTE = 'data-minimap-in-view';
+
 /** Pairs the post title in the canvas with the title entry in the minimap. */
 const TITLE_ID = 'title';
 
@@ -470,6 +476,10 @@ export default class ScrollSync {
 		}
 
 		const canvasAnchors = getCanvasAnchors( this.canvas );
+
+		// Magnifying entries changes the minimap's layout, so it goes first.
+		this.markInView( canvasAnchors );
+
 		const minimapAnchors = getMinimapAnchors(
 			this.container,
 			this.minimapScroller
@@ -501,6 +511,59 @@ export default class ScrollSync {
 		}
 
 		this.updateSpotlight( canvasAnchors, minimapAnchors );
+	}
+
+	/**
+	 * Marks the entries whose blocks show in the canvas viewport, or clears
+	 * the marks while the spotlight is off or has nothing to single out.
+	 *
+	 * Which blocks are in view depends only on the canvas, so magnifying
+	 * them never feeds back into which ones are magnified.
+	 *
+	 * @param {Map<string, number>} canvasAnchors Canvas anchor offsets.
+	 */
+	markInView( canvasAnchors ) {
+		const enabled = !! this.spotlightRef.current && ! this.canvasShowsAll();
+		const { scrollTop, clientHeight } = this.canvas.scroller;
+		const viewBottom = scrollTop + clientHeight;
+		const tops = Array.from( canvasAnchors.values() );
+		const inView = new Set();
+
+		Array.from( canvasAnchors.keys() ).forEach( ( id, index ) => {
+			const top = tops[ index ];
+			const bottom =
+				index + 1 < tops.length
+					? tops[ index + 1 ]
+					: getCanvasContentEnd( this.canvas );
+
+			if ( top < viewBottom && bottom > scrollTop ) {
+				inView.add( id );
+			}
+		} );
+
+		Array.from( this.container.children ).forEach( ( entry ) => {
+			const show =
+				enabled && inView.has( entry.getAttribute( ENTRY_ATTRIBUTE ) );
+
+			if ( show !== entry.hasAttribute( IN_VIEW_ATTRIBUTE ) ) {
+				entry.toggleAttribute( IN_VIEW_ATTRIBUTE, show );
+			}
+		} );
+	}
+
+	/**
+	 * Whether the canvas shows the whole post at once, leaving the
+	 * spotlight nothing to single out.
+	 *
+	 * @return {boolean} True when all of the content is in view.
+	 */
+	canvasShowsAll() {
+		const { scrollTop, clientHeight } = this.canvas.scroller;
+
+		return (
+			scrollTop < 1 &&
+			scrollTop + clientHeight >= getCanvasContentEnd( this.canvas ) - 1
+		);
 	}
 
 	/**
@@ -548,6 +611,12 @@ export default class ScrollSync {
 			return;
 		}
 
+		// With the whole post in view there is nothing to single out.
+		if ( this.canvasShowsAll() ) {
+			this.hideSpotlight();
+			return;
+		}
+
 		const { scrollTop, clientHeight } = this.canvas.scroller;
 		const points = this.getSpotlightBreakpoints(
 			canvasAnchors,
@@ -555,12 +624,6 @@ export default class ScrollSync {
 		);
 		const top = mapOffset( points, scrollTop );
 		const bottom = mapOffset( points, scrollTop + clientHeight );
-
-		// With the whole post in view there is nothing to single out.
-		if ( top < 1 && bottom > this.container.offsetHeight - 1 ) {
-			this.hideSpotlight();
-			return;
-		}
 
 		spotlight.hidden = false;
 		spotlight.style.transform = `translateY(${ top }px)`;
@@ -595,23 +658,11 @@ export default class ScrollSync {
 		// Keeps the drag tracking once the pointer leaves the sidebar.
 		spotlight.setPointerCapture( event.pointerId );
 
-		const canvasAnchors = getCanvasAnchors( this.canvas );
-		const minimapAnchors = getMinimapAnchors(
-			this.container,
-			this.minimapScroller
-		);
-
 		this.drag = {
 			pointerId: event.pointerId,
 			// Where on the frame it was grabbed, so it stays under the pointer.
 			grab: event.clientY - spotlight.getBoundingClientRect().top,
 			clientY: event.clientY,
-			canvasAnchors,
-			minimapAnchors,
-			points: this.getSpotlightBreakpoints(
-				canvasAnchors,
-				minimapAnchors
-			),
 		};
 		spotlight.classList.add( 'is-dragging' );
 	}
@@ -639,24 +690,34 @@ export default class ScrollSync {
 	/**
 	 * Scrolls the canvas so the spotlight's top edge lands where the pointer
 	 * put it, mapping back from the minimap to the canvas through the same
-	 * breakpoints the spotlight was placed with.
+	 * breakpoints the spotlight is placed with. The minimap is measured
+	 * afresh each step, as the entries magnified inside the spotlight change
+	 * along the way.
 	 */
 	dragTo() {
 		if ( ! this.drag || ! this.canvas ) {
 			return;
 		}
 
-		const { clientY, grab, points, canvasAnchors, minimapAnchors } =
-			this.drag;
+		const { clientY, grab } = this.drag;
 		const scroller = this.canvas.scroller;
+		const canvasAnchors = getCanvasAnchors( this.canvas );
 		const top =
 			clientY - grab - this.container.getBoundingClientRect().top;
+		const points = this.getSpotlightBreakpoints(
+			canvasAnchors,
+			getMinimapAnchors( this.container, this.minimapScroller )
+		);
 
 		scroller.scrollTo( {
 			top: mapOffset( points, top, true ),
 			behavior: 'instant',
 		} );
-		this.updateSpotlight( canvasAnchors, minimapAnchors );
+		this.markInView( canvasAnchors );
+		this.updateSpotlight(
+			canvasAnchors,
+			getMinimapAnchors( this.container, this.minimapScroller )
+		);
 	}
 
 	/**

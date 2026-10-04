@@ -41,6 +41,15 @@ const saveSpotlight = ( page, enabled ) =>
 		enabled
 	);
 
+const saveSize = ( page, size ) =>
+	page.evaluate(
+		( value ) =>
+			window.wp.data
+				.dispatch( 'core/preferences' )
+				.set( 'block-minimap', 'size', value ),
+		size
+	);
+
 const canvasScrollTop = ( page ) =>
 	page
 		.frame( { name: 'editor-canvas' } )
@@ -95,8 +104,9 @@ test.describe( 'Viewport spotlight', () => {
 	} );
 
 	test.afterEach( async ( { page } ) => {
-		// The preference follows the user, so leave it on the default.
+		// The preferences follow the user, so leave them on the defaults.
 		await saveSpotlight( page, true );
+		await saveSize( page, 'auto' );
 	} );
 
 	test( 'is on by default', async ( { page } ) => {
@@ -129,6 +139,36 @@ test.describe( 'Viewport spotlight', () => {
 		await expect
 			.poll( () => page.evaluate( paragraphAtTop, 'minimap' ) )
 			.toBeCloseTo( expected, 1 );
+	} );
+
+	test( 'draws the entries in view at full size in compact sizes', async ( {
+		page,
+	} ) => {
+		await fillWithParagraphs( page, 60 );
+		await saveSize( page, 'half' );
+		await openMinimap( page );
+
+		await page.frame( { name: 'editor-canvas' } ).evaluate( () => {
+			document
+				.querySelectorAll( '.is-root-container > [data-block]' )[ 30 ]
+				.scrollIntoView( { block: 'start' } );
+		} );
+
+		const inkColor = ( index ) =>
+			getMinimap( page ).evaluate(
+				( container, entry ) =>
+					getComputedStyle(
+						container.querySelectorAll(
+							':scope > .core-paragraph'
+						)[ entry ].querySelector( '.minimap-ink' )
+					).color,
+				index
+			);
+
+		// The paragraph at the top of the canvas reads as text, far ones as bars.
+		await expect.poll( () => inkColor( 30 ) ).not.toBe( 'rgba(0, 0, 0, 0)' );
+		expect( await inkColor( 5 ) ).toBe( 'rgba(0, 0, 0, 0)' );
+		expect( await inkColor( 55 ) ).toBe( 'rgba(0, 0, 0, 0)' );
 	} );
 
 	test( 'is hidden when the whole post fits in the canvas', async ( {

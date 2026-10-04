@@ -309,7 +309,7 @@ pre.minimap-pre {
  * line and stops where the last line does, so the bars keep the shape of
  * each paragraph.
  */
-#minimap-container.is-compact .minimap-ink {
+#minimap-container.is-compact .minimap-ink:not([data-minimap-in-view], [data-minimap-in-view] *) {
 	color: transparent;
 	background-color: #c3c4c7;
 	border-radius: 1px;
@@ -317,7 +317,7 @@ pre.minimap-pre {
 	box-decoration-break: clone;
 }
 
-#minimap-container.is-compact .minimap-ink * {
+#minimap-container.is-compact .minimap-ink:not([data-minimap-in-view], [data-minimap-in-view] *) * {
 	color: transparent;
 }
 
@@ -326,26 +326,21 @@ pre.minimap-pre {
  * set smaller than its pitch: thin bars with a gap between them, and more
  * words to a line.
  */
-#minimap-container.is-compact .minimap-text,
-#minimap-container.is-compact pre.minimap-pre,
-#minimap-container.is-compact .core-list li,
-#minimap-container.is-compact .core-table td,
-#minimap-container.is-compact .core-table th {
+#minimap-container.is-compact .minimap-text:not([data-minimap-in-view], [data-minimap-in-view] *),
+#minimap-container.is-compact pre.minimap-pre:not([data-minimap-in-view], [data-minimap-in-view] *),
+#minimap-container.is-compact .core-list li:not([data-minimap-in-view], [data-minimap-in-view] *),
+#minimap-container.is-compact .core-table td:not([data-minimap-in-view], [data-minimap-in-view] *),
+#minimap-container.is-compact .core-table th:not([data-minimap-in-view], [data-minimap-in-view] *) {
 	font-size: calc( 6px * var( --minimap-scale ) );
 	line-height: calc( 11px * var( --minimap-scale ) );
 }
 
-#minimap-container.is-compact .minimap-text {
+#minimap-container.is-compact .minimap-text:not([data-minimap-in-view], [data-minimap-in-view] *) {
 	-webkit-line-clamp: 4;
 }
 
 /* Headings and the title stay real text, so the outline is scannable. */
-#minimap-container.is-compact h1,
-#minimap-container.is-compact h2,
-#minimap-container.is-compact h3,
-#minimap-container.is-compact h4,
-#minimap-container.is-compact h5,
-#minimap-container.is-compact h6 {
+#minimap-container.is-compact :is( h1, h2, h3, h4, h5, h6 ):not([data-minimap-in-view], [data-minimap-in-view] *) {
 	margin-top: calc( 6px * var( --minimap-scale ) );
 	font-size: 9px;
 	line-height: 1.2;
@@ -353,11 +348,22 @@ pre.minimap-pre {
 	color: #1e1e1e;
 }
 
-#minimap-container.is-compact .minimap-block.title {
+#minimap-container.is-compact .minimap-block.title:not([data-minimap-in-view], [data-minimap-in-view] *) {
 	font-size: 12px;
 	line-height: 1.2;
 	font-weight: 600;
 	color: #1e1e1e;
+}
+
+/*
+ * Inside the spotlight, entries whose blocks show in the canvas draw at
+ * full size, like a magnifier over the compact minimap, so the framed part
+ * reads as the post and takes on more of the canvas's shape. The compact
+ * rules that do not scale with `--minimap-scale` skip these entries.
+ */
+#minimap-container.is-compact > [data-minimap-in-view] {
+	--minimap-scale: 1;
+	font-size: 13px;
 }
 
 /*
