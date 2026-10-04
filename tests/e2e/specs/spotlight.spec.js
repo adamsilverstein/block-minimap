@@ -39,6 +39,54 @@ const saveSize = ( page, size ) =>
 		size
 	);
 
+/**
+ * Replaces the post content with sections mixing the common blocks: a
+ * heading, long paragraphs, a quote, a list, a full width cover taller than
+ * the canvas and a wide group, so the blocks in view are not all one width
+ * or one kind, and at times none of them sits in the text column.
+ *
+ * @param {import('@playwright/test').Page} page  Playwright page.
+ * @param {number}                          count How many sections.
+ */
+const fillWithSections = ( page, count ) =>
+	page.evaluate( ( sections ) => {
+		const { createBlock } = window.wp.blocks;
+		const text =
+			'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. '.repeat(
+				5
+			);
+
+		window.wp.data.dispatch( 'core/block-editor' ).resetBlocks(
+			Array.from( { length: sections }, ( _, index ) => [
+				createBlock( 'core/heading', {
+					content: `Section ${ index + 1 }`,
+				} ),
+				createBlock( 'core/paragraph', { content: text } ),
+				createBlock( 'core/paragraph', { content: text } ),
+				createBlock( 'core/quote', {}, [
+					createBlock( 'core/paragraph', {
+						content: `A quote worth pulling out of section ${
+							index + 1
+						}.`,
+					} ),
+				] ),
+				createBlock( 'core/list', {}, [
+					createBlock( 'core/list-item', { content: 'First item' } ),
+					createBlock( 'core/list-item', { content: 'Second item' } ),
+				] ),
+				createBlock( 'core/paragraph', { content: text } ),
+				createBlock(
+					'core/cover',
+					{ align: 'full', minHeight: 900, customOverlayColor: '#345' },
+					[ createBlock( 'core/paragraph', { content: 'Cover' } ) ]
+				),
+				createBlock( 'core/group', { align: 'wide' }, [
+					createBlock( 'core/paragraph', { content: text } ),
+				] ),
+			] ).flat()
+		);
+	}, count );
+
 const canvasScrollTop = ( page ) =>
 	page
 		.frame( { name: 'editor-canvas' } )
@@ -112,6 +160,54 @@ test.describe( 'Viewport spotlight', () => {
 
 		expect( heights.size ).toBe( 1 );
 	} );
+
+	for ( const size of [ 'full', 'two-thirds', 'half' ] ) {
+		test( `keeps one height through a wheel scroll at the ${ size } size`, async ( {
+			page,
+		} ) => {
+			await fillWithSections( page, 12 );
+			await saveSize( page, size );
+			await openMinimap( page );
+			await expect( getSpotlight( page ) ).toBeVisible();
+
+			// Record the frame's height on every animation frame.
+			await page.evaluate( () => {
+				window.spotlightHeights = [];
+				const record = () => {
+					const frame = document.querySelector( '.minimap-spotlight' );
+
+					if ( frame && ! frame.hidden ) {
+						window.spotlightHeights.push(
+							Math.round( frame.getBoundingClientRect().height )
+						);
+					}
+					window.spotlightRecorder = requestAnimationFrame( record );
+				};
+				record();
+			} );
+
+			// Scroll the canvas with the wheel, a notch at a time.
+			const canvasBox = await page
+				.locator( 'iframe[name="editor-canvas"]' )
+				.boundingBox();
+			await page.mouse.move(
+				canvasBox.x + canvasBox.width / 2,
+				canvasBox.y + canvasBox.height / 2
+			);
+			for ( let notch = 0; notch < 80; notch++ ) {
+				await page.mouse.wheel( 0, 100 );
+			}
+			await page.waitForTimeout( 500 );
+
+			const heights = await page.evaluate( () => {
+				cancelAnimationFrame( window.spotlightRecorder );
+				return window.spotlightHeights;
+			} );
+
+			expect( heights.length ).toBeGreaterThan( 10 );
+			expect( [ ...new Set( heights ) ] ).toHaveLength( 1 );
+		} );
+	}
 
 	test( 'draws the entries in view at full size in compact sizes', async ( {
 		page,
