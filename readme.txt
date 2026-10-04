@@ -27,9 +27,10 @@ Development takes place in the [GitHub repository](https://github.com/adamsilver
 
 == Screenshots ==
 
-1. The Block Minimap sidebar next to a long post, scrolled in step with the editor canvas.
-2. Nested blocks and Columns rendered side by side in the minimap.
-3. Different block types - images, quotes, tables, code, galleries - each drawn in its own shape.
+1. Scrolling a long post with the minimap following along, then dragging the spotlight frame to move through the post.
+2. The Block Minimap sidebar next to a long post, scrolled in step with the editor canvas.
+3. Nested blocks and Columns rendered side by side in the minimap.
+4. Different block types - images, quotes, tables, code, galleries - each drawn in its own shape.
 
 == Installation ==
 
