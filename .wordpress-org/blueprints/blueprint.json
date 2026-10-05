@@ -1,0 +1,37 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"landingPage": "/wp-admin/post.php?post=1000&action=edit",
+	"preferredVersions": {
+		"php": "8.3",
+		"wp": "latest"
+	},
+	"features": {
+		"networking": true
+	},
+	"steps": [
+		{
+			"step": "login",
+			"username": "admin",
+			"password": "password"
+		},
+		{
+			"step": "installPlugin",
+			"pluginData": {
+				"resource": "wordpress.org/plugins",
+				"slug": "block-minimap"
+			},
+			"options": {
+				"activate": true
+			}
+		},
+		{
+			"step": "runPHP",
+			"code": "<?php\nrequire '/wordpress/wp-load.php';\n\n$lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ';\n$p     = function ( $text ) {\n\treturn \"<!-- wp:paragraph -->\\n<p>$text</p>\\n<!-- /wp:paragraph -->\\n\\n\";\n};\n$topics  = array( 'Planning the trip', 'Packing light', 'Getting there', 'Where to stay', 'Eating well', 'Day hikes', 'Rainy days', 'Coming home' );\n$content = '';\nforeach ( $topics as $i => $topic ) {\n\t$content .= \"<!-- wp:heading -->\\n<h2 class=\\\"wp-block-heading\\\">$topic</h2>\\n<!-- /wp:heading -->\\n\\n\";\n\t$content .= $p( str_repeat( $lorem, 2 + $i % 2 ) );\n\tswitch ( $i % 4 ) {\n\t\tcase 0:\n\t\t\t$content .= \"<!-- wp:list -->\\n<ul class=\\\"wp-block-list\\\"><!-- wp:list-item -->\\n<li>Check the forecast</li>\\n<!-- /wp:list-item -->\\n\\n<!-- wp:list-item -->\\n<li>Book early</li>\\n<!-- /wp:list-item -->\\n\\n<!-- wp:list-item -->\\n<li>Share your plans</li>\\n<!-- /wp:list-item --></ul>\\n<!-- /wp:list -->\\n\\n\";\n\t\t\tbreak;\n\t\tcase 1:\n\t\t\t$content .= \"<!-- wp:quote -->\\n<blockquote class=\\\"wp-block-quote\\\"><!-- wp:paragraph -->\\n<p>The best trips are the ones you barely planned.</p>\\n<!-- /wp:paragraph --></blockquote>\\n<!-- /wp:quote -->\\n\\n\";\n\t\t\tbreak;\n\t\tcase 2:\n\t\t\t$content .= \"<!-- wp:columns -->\\n<div class=\\\"wp-block-columns\\\"><!-- wp:column -->\\n<div class=\\\"wp-block-column\\\"><!-- wp:heading {\\\"level\\\":3} -->\\n<h3 class=\\\"wp-block-heading\\\">Morning</h3>\\n<!-- /wp:heading -->\\n\\n\" . $p( $lorem ) . \"</div>\\n<!-- /wp:column -->\\n\\n<!-- wp:column -->\\n<div class=\\\"wp-block-column\\\"><!-- wp:heading {\\\"level\\\":3} -->\\n<h3 class=\\\"wp-block-heading\\\">Evening</h3>\\n<!-- /wp:heading -->\\n\\n\" . $p( $lorem ) . \"</div>\\n<!-- /wp:column --></div>\\n<!-- /wp:columns -->\\n\\n\";\n\t\t\tbreak;\n\t\tcase 3:\n\t\t\t$content .= \"<!-- wp:table -->\\n<figure class=\\\"wp-block-table\\\"><table><tbody><tr><td>Tent</td><td>\\$20</td></tr><tr><td>Stove</td><td>\\$30</td></tr><tr><td>Map</td><td>\\$10</td></tr></tbody></table></figure>\\n<!-- /wp:table -->\\n\\n\";\n\t\t\tbreak;\n\t}\n\t$content .= $p( str_repeat( $lorem, 1 + $i % 3 ) );\n\tif ( 1 === $i % 3 ) {\n\t\t$content .= \"<!-- wp:code -->\\n<pre class=\\\"wp-block-code\\\"><code>const trip = plan( { days: 5 } );\\nawait trip.start();</code></pre>\\n<!-- /wp:code -->\\n\\n\";\n\t}\n\t$content .= $p( str_repeat( $lorem, 2 ) );\n}\n\nwp_insert_post(\n\tarray(\n\t\t'import_id'    => 1000,\n\t\t'post_title'   => 'A long weekend in the mountains',\n\t\t'post_content' => $content,\n\t\t'post_status'  => 'draft',\n\t\t'post_author'  => 1,\n\t)\n);\n\n// Skip the editor welcome guide and keep the sidebar open.\nupdate_user_meta(\n\t1,\n\t$GLOBALS['wpdb']->get_blog_prefix() . 'persisted_preferences',\n\tarray(\n\t\t'core'           => array(\n\t\t\t'isComplementaryAreaVisible' => true,\n\t\t\t'welcomeGuide'               => false,\n\t\t),\n\t\t'core/edit-post' => array(\n\t\t\t'welcomeGuide' => false,\n\t\t),\n\t\t'_modified'      => gmdate( 'c' ),\n\t)\n);\n"
+		},
+		{
+			"step": "writeFile",
+			"path": "/wordpress/wp-content/mu-plugins/block-minimap-demo.php",
+			"data": "<?php\n/**\n * Plugin Name: Block Minimap demo\n * Description: Opens the Block Minimap sidebar when the editor loads.\n */\n\nadd_action(\n\t'enqueue_block_editor_assets',\n\tfunction () {\n\t\twp_add_inline_script(\n\t\t\t'wp-edit-post',\n\t\t\t\"wp.domReady( function () {\n\t\t\t\tvar area = 'block-minimap/block-minimap';\n\t\t\t\tvar unsubscribe = function () {};\n\t\t\t\tvar openMinimap = function () {\n\t\t\t\t\tvar active = wp.data.select( 'core/interface' ).getActiveComplementaryArea( 'core' );\n\t\t\t\t\tif ( ! active ) {\n\t\t\t\t\t\treturn false;\n\t\t\t\t\t}\n\t\t\t\t\tunsubscribe();\n\t\t\t\t\tif ( active !== area ) {\n\t\t\t\t\t\twp.data.dispatch( 'core/interface' ).enableComplementaryArea( 'core', area );\n\t\t\t\t\t}\n\t\t\t\t\treturn true;\n\t\t\t\t};\n\t\t\t\t// Wait for the editor to open its first sidebar, unless it already has.\n\t\t\t\tif ( ! openMinimap() ) {\n\t\t\t\t\tunsubscribe = wp.data.subscribe( openMinimap );\n\t\t\t\t}\n\t\t\t} );\"\n\t\t);\n\t}\n);\n"
+		}
+	]
+}

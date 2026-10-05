@@ -23,6 +23,8 @@ Long posts get hard to navigate in the block editor. Block Minimap adds a sideba
 
 Open the minimap from the Block Minimap item in the editor's Options menu.
 
+[Try Block Minimap in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/adamsilverstein/block-minimap/master/.wordpress-org/blueprints/blueprint.json) - it opens a long demo post in the editor with the minimap already showing, no install needed.
+
 Development takes place in the [GitHub repository](https://github.com/adamsilverstein/block-minimap). Issues and pull requests are welcome.
 
 == Screenshots ==

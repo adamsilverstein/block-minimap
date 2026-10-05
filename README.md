@@ -2,7 +2,7 @@
 
 > A minimap for the WordPress block editor (Gutenberg).
 
-[![Support Level](https://img.shields.io/badge/support-active-green.svg)](#support-level) [![Release Version](https://img.shields.io/github/release/adamsilverstein/block-minimap.svg)](https://github.com/adamsilverstein/block-minimap/releases/latest) ![WordPress tested up to version](https://img.shields.io/badge/WordPress-v7.1%20tested-success.svg) [![GPL-2.0 License](https://img.shields.io/github/license/adamsilverstein/block-minimap.svg)](https://github.com/adamsilverstein/block-minimap/blob/master/LICENSE.md)
+[![Support Level](https://img.shields.io/badge/support-active-green.svg)](#support-level) [![Release Version](https://img.shields.io/github/release/adamsilverstein/block-minimap.svg)](https://github.com/adamsilverstein/block-minimap/releases/latest) ![WordPress tested up to version](https://img.shields.io/badge/WordPress-v7.1%20tested-success.svg) [![GPL-2.0 License](https://img.shields.io/github/license/adamsilverstein/block-minimap.svg)](https://github.com/adamsilverstein/block-minimap/blob/master/LICENSE.md) [![Try it in WordPress Playground](https://img.shields.io/wordpress/plugin/v/block-minimap?logo=wordpress&logoColor=FFFFFF&label=Playground%20Demo&labelColor=3858E9&color=3858E9)](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/adamsilverstein/block-minimap/master/.wordpress-org/blueprints/blueprint.json)
 
 ## Screenshot
 
