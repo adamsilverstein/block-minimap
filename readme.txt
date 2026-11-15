@@ -2,7 +2,7 @@
 Contributors:  adamsilverstein
 Tags: minimap, navigation, block editor, gutenberg, outline
 Requires at least: 5.4
-Tested up to: 7.1
+Tested up to: 7.2
 Requires PHP: 5.6
 Stable tag: 1.2.0
 License: GPLv2 or later
