@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file, per [the Ke
 
 ## [Unreleased]
 
+## [1.2.1]
+### Added
+- A WordPress Playground blueprint that opens a ready-made demo post, linked from both readmes.
+
+### Changed
+- Tested up to WordPress 7.2.
+- The plugin directory screenshots lead with an animated spotlight demo.
+
 ## [1.2.0]
 ### Added
 - A spotlight over the part of the minimap visible in the editor canvas: a theme color frame around it, with the rest dimmed. The frame keeps one size, the shape of the canvas's text column, and the entries inside it draw as a miniature of that column. Dragging the frame scrolls the canvas, and a Highlight visible area toggle, saved as a user preference, turns it off. ([#62](https://github.com/adamsilverstein/block-minimap/issues/62))

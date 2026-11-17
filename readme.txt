@@ -4,7 +4,7 @@ Tags: minimap, navigation, block editor, gutenberg, outline
 Requires at least: 5.4
 Tested up to: 7.2
 Requires PHP: 5.6
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
@@ -42,6 +42,11 @@ Development takes place in the [GitHub repository](https://github.com/adamsilver
 
 == Changelog ==
 
+= 1.2.1 =
+* Confirm compatibility with WordPress 7.2.
+* Add a Playground demo with a ready-made post, linked from the readme.
+* Lead the plugin directory screenshots with an animated spotlight demo.
+
 = 1.2.0 =
 * A size control for the minimap: Automatic, 100%, 2/3 and 1/2. Below 100%, body text draws as gray bars while headings stay readable.
 * A spotlight marks the part of the minimap visible in the editor and dims the rest, drawing it as a miniature of the editor. Drag it to scroll the post, or turn it off with Highlight visible area.
@@ -62,6 +67,9 @@ Added
 * Initial plugin release 🎉
 
 == Upgrade Notice ==
+
+= 1.2.1 =
+Confirms compatibility with WordPress 7.2. No code changes.
 
 = 1.2.0 =
 Compact minimap sizes for long posts, and a spotlight showing which part of the post is in view.
